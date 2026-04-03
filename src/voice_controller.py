@@ -190,9 +190,13 @@ class VoiceController:
             if self.playback_queue.empty():
                 if self.received_final_chunk_to_play:
                     # this was the final thing to do.
-                    if self.on_job_done:
-                        self.on_job_done()
-                    self.reset()
+                    try:
+                        if self.on_job_done:
+                            self.on_job_done()
+                    except Exception:
+                        logging.exception("> on_job_done callback failed")
+                    finally:
+                        self.reset()
 
     def text_to_speech(self, text: str, output_file: str):
         logging.info("> TTS starting TTS request")
