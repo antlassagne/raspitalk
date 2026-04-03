@@ -173,7 +173,9 @@ class VoiceController:
             logging.info("> TTS worker got text: {}".format(text))
             output_file = "user_prompt_{}.{}".format(id, SOUND_FORMAT)
             self.text_to_speech(text, output_file)
-            if self.on_tts_ready:
+            if self.on_tts_ready is None:
+                raise Exception("Callback for TTS ready not set")
+            else:
                 self.on_tts_ready(output_file)
             self.tts_queue.task_done()
 
