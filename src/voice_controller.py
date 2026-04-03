@@ -193,6 +193,7 @@ class VoiceController(QObject):
             if self.playback_queue.empty():
                 if self.received_final_chunk_to_play:
                     # this was the final thing to do.
+                    logging.info("Playback worker: final chunk played. Resetting everything.")
                     self.job_done.emit()
                     self.reset()
 
@@ -288,9 +289,15 @@ class VoiceController(QObject):
         self.playback.seek(0)
         self.playback.resume()
 
+        counter = 0
+        while counter < 100:
+            print("playback state:", self.playback.active, self.playback.paused)
+            counter= counter + 1
+            time.sleep(0.1)
+
         while self.playback.active:
             time.sleep(0.2)
 
-        time.sleep(1)  # small delay to ensure smooth playback
+        time.sleep(10)  # small delay to ensure smooth playback
 
         logging.info("Finished playing audio file: {}".format(audio_file_path))

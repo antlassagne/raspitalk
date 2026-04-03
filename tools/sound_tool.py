@@ -15,7 +15,7 @@ import logging
 import time
 
 sound_id = 0
-
+os.environ["QT_QPA_PLATFORM"] = "minimal"
 
 def run():
     i = 0
@@ -47,8 +47,10 @@ from src.mic_controller import MicController
 from src.voice_controller import SOUND_FORMAT, VoiceController
 
 # file = "resources/stories/grimoireauxhistoires/Au-secour-un-monstre-MP3.wav"
-file = "resources/stories/pomme-d-api-trimmed/006 - Les Trésors de Pomme d'Api La verdiole de la peur (bonus).mp3"
+#file = "resources/stories/pomme-d-api-trimmed/006 - Les Trésors de Pomme d'Api La verdiole de la peur (bonus).wav"
 # file = "user_prompt_1.wav"
+file= "/home/pi/Documents/rapilunii/resources/stories/test.mp3"
+file= "/home/pi/Documents/rapilunii/resources/stories/fearsome/3.mp3"
 voice_controller = VoiceController("http://localhost")
 
 listener_thread = Thread(target=run, daemon=True)
@@ -56,11 +58,13 @@ listener_thread.start()
 
 # mic_controller = MicController()
 # mic_controller.start_recording(duration=5, output_file="input.{}".format(SOUND_FORMAT))
-sound_id = voice_controller.play_audio_file(file)
+# voice_controller.play_audio_file(file)
+voice_controller.push_to_playback_queue(file)
+voice_controller.received_final_chunk_to_play = True
 # play(file, async_mode=False)
 print("Done")
-
+print("=========")
 # sound_id = play(file, async_mode=False)
 while 1:
     time.sleep(1)
-    print("tick")
+    print("tickkkk")
