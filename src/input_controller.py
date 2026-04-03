@@ -5,8 +5,6 @@ import time
 from enum import Enum
 
 from gpiozero import Button
-from PyQt6.QtCore import QObject
-from PyQt6.QtCore import pyqtSignal as Signal
 
 DEBUG_KEYBOARD_ENABLED = 0
 
@@ -19,7 +17,7 @@ except Exception as e:
 
 
 """
-Class that detects keyboard key presses and emits signals accordingly.
+Class that detects keyboard key presses and run callbacks accordingly.
 """
 
 LEFT_BUTTON_ID = 16
@@ -27,17 +25,16 @@ MIDDLE_BUTTON_ID = 26
 RIGHT_BUTTON_ID = 21
 
 
-class InputController(QObject):
-    key_pressed = Signal(int)
+class InputController():
 
     keyboard_running = False
 
     if DEBUG_KEYBOARD_ENABLED:
         keyboard = Controller()
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, key_pressed_callback):
         logging.info("Hello InputController!")
+        self.key_pressed = key_pressed_callback
 
         try:
             time.sleep(1)  # it seems that can improve stability.
@@ -87,11 +84,11 @@ class InputController(QObject):
 
     def on_left_button_released(self):
         logging.info("Left button released.")
-        self.key_pressed.emit(INPUT_CONTROLLER_ACTION.LEFT_BUTTON_TOGGLE.value)
+        self.key_pressed(INPUT_CONTROLLER_ACTION.LEFT_BUTTON_TOGGLE.value)
 
     def on_right_button_released(self):
         logging.info("Right button released.")
-        self.key_pressed.emit(INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_TOGGLE.value)
+        self.key_pressed(INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_TOGGLE.value)
         # pick menu item or validate choice
         # start listening for prompt in both story and conversation mode.
         # stop listening when pressed again.
@@ -100,21 +97,21 @@ class InputController(QObject):
 
     def on_middle_button_released(self):
         logging.info("Middle button released.")
-        self.key_pressed.emit(INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_TOGGLE.value)
+        self.key_pressed(INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_TOGGLE.value)
         # switch between logs and normal display mode
 
     def on_left_button_held(self):
         logging.info("Left button held.")
-        self.key_pressed.emit(INPUT_CONTROLLER_ACTION.LEFT_BUTTON_HELD.value)
+        self.key_pressed(INPUT_CONTROLLER_ACTION.LEFT_BUTTON_HELD.value)
         # Stop everything, cancel listened prompt.
 
     def on_right_button_held(self):
         logging.info("Right button held.")
-        self.key_pressed.emit(INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_HELD.value)
+        self.key_pressed(INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_HELD.value)
 
     def on_middle_button_held(self):
         logging.info("Middle button held.")
-        self.key_pressed.emit(INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_HELD.value)
+        self.key_pressed(INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_HELD.value)
         sys.exit(212)
         # reboot the device
 
@@ -134,24 +131,24 @@ class InputController(QObject):
         if isinstance(key, KeyCode):
             if key.char == "s":
                 logging.info("left key pressed.")
-                self.key_pressed.emit(INPUT_CONTROLLER_ACTION.LEFT_BUTTON_TOGGLE.value)
+                self.key_pressed(INPUT_CONTROLLER_ACTION.LEFT_BUTTON_TOGGLE.value)
             elif key.char == "d":
                 logging.info("middle key pressed.")
-                self.key_pressed.emit(
+                self.key_pressed(
                     INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_TOGGLE.value
                 )
             elif key.char == "f":
                 logging.info("right key pressed.")
-                self.key_pressed.emit(INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_TOGGLE.value)
+                self.key_pressed(INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_TOGGLE.value)
             elif key.char == "x":
                 logging.info("left key held.")
-                self.key_pressed.emit(INPUT_CONTROLLER_ACTION.LEFT_BUTTON_HELD.value)
+                self.key_pressed(INPUT_CONTROLLER_ACTION.LEFT_BUTTON_HELD.value)
             elif key.char == "c":
                 logging.info("middle key held.")
-                self.key_pressed.emit(INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_HELD.value)
+                self.key_pressed(INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_HELD.value)
             elif key.char == "v":
                 logging.info("right key held.")
-                self.key_pressed.emit(INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_HELD.value)
+                self.key_pressed(INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_HELD.value)
 
 
 class INPUT_CONTROLLER_ACTION(Enum):

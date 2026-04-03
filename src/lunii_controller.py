@@ -52,12 +52,9 @@ class LuniiController:
         self.ollama = OllamaController(host=host)
         self.voice = VoiceController(host=host)
         self.mic = MicController()
-        self.input = InputController()
+        self.input = InputController(self.handle_input)
         self.state_machine = InputControllerStateMachine(self.ai_available)
         self.recordings = RecordingsController()
-
-        # Input signal (now onl from the keyboard during development)
-        self.input.key_pressed.connect(self.handle_input)
 
         # connect ollama signals to warn us whenever a written sntence is ready
         self.ollama.story_chunk_ready.connect(self.on_story_chunk_available)
