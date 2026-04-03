@@ -33,7 +33,36 @@ It's a small box that can tell stories. It's based on raspi zero with some addon
 
 ## Installation
 
-### On the edge
+### On the edge (using the installer)
+
+Build the self-extracting installer on a development machine (requires
+[makeself](https://makeself.io/)):
+
+```bash
+sudo apt install makeself
+./build_installer.sh
+```
+
+Copy the generated `raspitalk-installer.run` file to the Raspberry Pi and run:
+
+```bash
+sudo ./raspitalk-installer.run
+```
+
+The installer takes care of system dependencies, Python packages, and the
+systemd service. Once installed, start the service with:
+
+```bash
+sudo systemctl start laboite.service
+```
+
+To uninstall, run:
+
+```bash
+sudo /usr/local/raspilunii/uninstall.sh
+```
+
+### On the edge (manual)
 
 ```
 sudo apt install libportaudio2 portaudio19-dev git-lfs
