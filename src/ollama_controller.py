@@ -131,9 +131,6 @@ class OllamaController:
             self.story += story_chunk
             untouched_story += story_chunk
             if async_mode:
-                if self.refine_and_publish_story_if_ready is None:
-                    raise Exception("Callback for story chunk ready not set")
-
                 self.refine_and_publish_story_if_ready()
         if async_mode:
             # don't emit this in non async mode, or it may be treated before the chunk is actually worked on
