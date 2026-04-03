@@ -9,8 +9,6 @@ import httpx
 import requests  # type: ignore
 from faster_whisper import WhisperModel
 from just_playback import Playback
-from PyQt6.QtCore import QObject
-from PyQt6.QtCore import pyqtSignal as Signal
 
 from src.alltalk_controller import AllTalkController
 
@@ -69,10 +67,7 @@ class STT_IMPL(Enum):
     SPEACHES = 3
 
 
-class VoiceController(QObject):
-    tts_ready = Signal(str)
-    job_done = Signal()
-
+class VoiceController:
     playback = Playback()
 
     tts_mode = TTS_IMPL.SPEACHES
@@ -84,7 +79,8 @@ class VoiceController(QObject):
     playback_queue: Queue = Queue(maxsize=1000)
 
     def __init__(self, host: str):
-        super().__init__()
+        self.on_tts_ready = None
+        self.on_job_done = None
 
         self.received_final_chunk = False
         self.received_final_chunk_to_play = False
@@ -175,7 +171,8 @@ class VoiceController(QObject):
             logging.info("> TTS worker got text: {}".format(text))
             output_file = "user_prompt_{}.{}".format(id, SOUND_FORMAT)
             self.text_to_speech(text, output_file)
-            self.tts_ready.emit(output_file)
+            if self.on_tts_ready:
+                self.on_tts_ready(output_file)
             self.tts_queue.task_done()
 
     def playback_worker(self):
@@ -193,8 +190,13 @@ class VoiceController(QObject):
             if self.playback_queue.empty():
                 if self.received_final_chunk_to_play:
                     # this was the final thing to do.
-                    self.job_done.emit()
-                    self.reset()
+                    try:
+                        if self.on_job_done:
+                            self.on_job_done()
+                    except Exception:
+                        logging.exception("> on_job_done callback failed")
+                    finally:
+                        self.reset()
 
     def text_to_speech(self, text: str, output_file: str):
         logging.info("> TTS starting TTS request")

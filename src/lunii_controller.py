@@ -64,7 +64,7 @@ class LuniiController:
         self.ollama.generation_finished.connect(self.on_story_generation_finished)
 
         # connect voice signals to warn us whenever tts .wav file is ready
-        self.voice.tts_ready.connect(self.on_story_tts_available)
+        self.voice.on_tts_ready = self.on_story_tts_available
 
         # all the commands that are following are handy for debugging so I keep them here commented
         # input_text = self.voice.speech_to_text(self.mic.temp_file)
