@@ -3,6 +3,7 @@ import sys
 import threading
 import time
 from enum import Enum
+from typing import Callable
 
 from gpiozero import Button
 
@@ -25,14 +26,13 @@ MIDDLE_BUTTON_ID = 26
 RIGHT_BUTTON_ID = 21
 
 
-class InputController():
-
+class InputController:
     keyboard_running = False
 
     if DEBUG_KEYBOARD_ENABLED:
         keyboard = Controller()
 
-    def __init__(self, key_pressed_callback):
+    def __init__(self, key_pressed_callback: Callable[[int], None]):
         logging.info("Hello InputController!")
         self.key_pressed = key_pressed_callback
 
@@ -134,9 +134,7 @@ class InputController():
                 self.key_pressed(INPUT_CONTROLLER_ACTION.LEFT_BUTTON_TOGGLE.value)
             elif key.char == "d":
                 logging.info("middle key pressed.")
-                self.key_pressed(
-                    INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_TOGGLE.value
-                )
+                self.key_pressed(INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_TOGGLE.value)
             elif key.char == "f":
                 logging.info("right key pressed.")
                 self.key_pressed(INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_TOGGLE.value)

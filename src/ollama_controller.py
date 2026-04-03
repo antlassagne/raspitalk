@@ -1,5 +1,6 @@
 import logging
 import threading
+from typing import Callable
 
 from ollama import Client
 
@@ -25,7 +26,10 @@ class OllamaController:
     running = False
 
     def __init__(
-        self, host: str, story_chunk_ready_callback, generation_finished_callback
+        self,
+        host: str,
+        story_chunk_ready_callback: Callable[[str], None],
+        generation_finished_callback: Callable[[], None],
     ):
         super().__init__()
         logging.info("Hello OllamaController!")
@@ -56,6 +60,8 @@ class OllamaController:
             raise Exception("story_chunk_ready callback not set")
 
         if self.refine_story():
+            if self.story_to_publish is None:
+                raise Exception("Story to publish should not be None here")
             logging.info("\nStory chunk ready: {}".format(self.story_to_publish))
             self.story_chunk_ready(self.story_to_publish)
             self.story_to_publish = None

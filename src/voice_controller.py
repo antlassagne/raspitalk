@@ -4,6 +4,7 @@ import time
 from enum import Enum
 from pathlib import Path
 from queue import Queue
+from typing import Callable
 
 import httpx
 import requests  # type: ignore
@@ -80,7 +81,7 @@ class VoiceController:
 
     on_tts_ready = None
 
-    def __init__(self, host: str, on_tts_ready_callback):
+    def __init__(self, host: str, on_tts_ready_callback: Callable[[str], None]):
         self.on_tts_ready = on_tts_ready_callback
 
         self.received_final_chunk = False
