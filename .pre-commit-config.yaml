@@ -48,13 +48,15 @@ repos:
     - hardware/.*
     - --exclude
     - src/external/.*
+    - --exclude
+    - tools/.*
     - .
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.11.0
   hooks:
   - id: ruff
-    args: [ --fix, --extend-exclude, hardware/*, --extend-exclude, src/external/* ]
+    args: [ --fix, --extend-exclude, hardware/*, --extend-exclude, src/external/*, --extend-exclude, tools/* ]
   - id: ruff-format
 
 - repo: https://github.com/PyCQA/docformatter

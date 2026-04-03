@@ -1,0 +1,16 @@
+[Unit]
+Description=Laboite - Interactive Story Box
+After=network.target sound.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/usr/local/raspilunii
+Environment="PYTHONUNBUFFERED=1"
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+ExecStart=python3 main.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

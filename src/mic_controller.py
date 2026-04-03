@@ -8,6 +8,7 @@ from pvrecorder import PvRecorder
 
 class MicController:
     prompt: str = ""
+    listener_thread: threading.Thread | None = None
 
     def __init__(self):
         super().__init__()
@@ -15,7 +16,7 @@ class MicController:
         for i in range(len(devices)):
             logging.info("index: %d, device name: %s" % (i, devices[i]))
         logging.info("Hello MicController!")
-        self.temp_file = ""
+        self.temp_file = "temp_audio.wav"
         self.running = False
         self.is_prompt_available = False
 
@@ -27,8 +28,10 @@ class MicController:
         self.listener_thread.start()
 
     def stop(self):
+        logging.info("Stopping the mic...")
         self.running = False
-        self.listener_thread.join()
+        if self.listener_thread and self.listener_thread.is_alive():
+            self.listener_thread.join()
 
     def run(self):
         # Create a temporary file to store the recorded audio (this will be deleted once we've finished transcription)
@@ -44,6 +47,10 @@ class MicController:
         while self.running:
             frame = recorder.read()
             audio.extend(frame)
+            print(".", end="", flush=True)
+        print(".")
+
+        logging.info("Stopping the recorder.")
 
         recorder.stop()
         logging.info("Finished recording audio - saving file")
