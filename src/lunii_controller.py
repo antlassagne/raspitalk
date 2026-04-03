@@ -49,19 +49,18 @@ class LuniiController:
             logging.info("Server not reachable: {}".format(e))
             self.ai_available = False
 
-        self.ollama = OllamaController(host=host)
-        self.voice = VoiceController(host=host)
+        self.ollama = OllamaController(
+            host=host,
+            story_chunk_ready_callback=self.on_story_chunk_available,
+            generation_finished_callback=self.on_story_generation_finished,
+        )
+        self.voice = VoiceController(
+            host=host, on_tts_ready_callback=self.on_story_tts_available
+        )
         self.mic = MicController()
         self.input = InputController(self.handle_input)
         self.state_machine = InputControllerStateMachine(self.ai_available)
         self.recordings = RecordingsController()
-
-        # connect ollama signals to warn us whenever a written sntence is ready
-        self.ollama.story_chunk_ready.connect(self.on_story_chunk_available)
-        self.ollama.generation_finished.connect(self.on_story_generation_finished)
-
-        # connect voice signals to warn us whenever tts .wav file is ready
-        self.voice.on_tts_ready = self.on_story_tts_available
 
         # all the commands that are following are handy for debugging so I keep them here commented
         # input_text = self.voice.speech_to_text(self.mic.temp_file)
