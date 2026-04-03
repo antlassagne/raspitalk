@@ -31,7 +31,13 @@ apt-get install -y --no-install-recommends \
 if ! command -v uv &>/dev/null; then
     info "Installing uv package manager..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.local/bin:$PATH"
+    # When running under sudo, uv is installed to the invoking user's home
+    if [ -n "${SUDO_USER:-}" ]; then
+        SUDO_USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
+        export PATH="${SUDO_USER_HOME}/.local/bin:$PATH"
+    else
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
     if ! command -v uv &>/dev/null; then
         error "Failed to install uv. Please install it manually: https://docs.astral.sh/uv/"
     fi
@@ -62,7 +68,12 @@ uv sync
 
 # --- Step 5: Set ownership ---
 info "Setting file ownership to ${SERVICE_USER}..."
-chown -R "${SERVICE_USER}:" "${INSTALL_DIR}"
+if ! id "${SERVICE_USER}" &>/dev/null; then
+    warn "User '${SERVICE_USER}' does not exist. Skipping ownership change."
+    warn "You may need to run: sudo chown -R <user>: ${INSTALL_DIR}"
+else
+    chown -R "${SERVICE_USER}:" "${INSTALL_DIR}"
+fi
 
 # --- Step 6: Install systemd service ---
 info "Installing systemd service..."
