@@ -172,4 +172,4 @@ class LuniiController:
             self.on_story_generation_finished()
         else:
             logging.info("Generating TTS asynchronously...")
-            # the connected signal will handle the rest
+            # the callbacks will handle the rest
