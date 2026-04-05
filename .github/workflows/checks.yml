@@ -3,7 +3,7 @@ permissions:
   contents: read
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -16,3 +16,19 @@ jobs:
       - uses: astral-sh/ruff-action@v3
         with:
           args: "format --check --diff"
+
+  build-installer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install makeself
+        run: sudo apt-get update -qq && sudo apt-get install -y makeself
+      - name: Build installer
+        run: ./build_installer.sh
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: raspitalk-installer
+          path: raspitalk-installer.run

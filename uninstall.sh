@@ -4,7 +4,7 @@ set -euo pipefail
 # RaspiTalk Uninstaller
 # Removes the RaspiTalk application from the system
 
-INSTALL_DIR="/usr/local/raspilunii"
+INSTALL_DIR="/usr/local/raspitalk"
 SERVICE_FILE="laboite.service"
 
 info() { echo "[INFO] $*"; }

@@ -4,7 +4,7 @@ set -euo pipefail
 # RaspiTalk Installer
 # Installs the RaspiTalk application on a Raspberry Pi
 
-INSTALL_DIR="/usr/local/raspilunii"
+INSTALL_DIR="/usr/local/raspitalk"
 SERVICE_FILE="laboite.service"
 SERVICE_USER="${SUDO_USER:-pi}"
 

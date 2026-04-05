@@ -59,7 +59,7 @@ sudo systemctl start laboite.service
 To uninstall, run:
 
 ```bash
-sudo /usr/local/raspilunii/uninstall.sh
+sudo /usr/local/raspitalk/uninstall.sh
 ```
 
 ### On the edge (manual)
