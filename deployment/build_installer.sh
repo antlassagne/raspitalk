@@ -8,9 +8,9 @@ set -euo pipefail
 # Usage: ./build_installer.sh
 # Output: raspitalk-installer.run
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "../$(dirname "$0")" && pwd)"
 BUILD_DIR="$(mktemp -d)"
-OUTPUT_FILE="${SCRIPT_DIR}/raspitalk-installer.run"
+OUTPUT_FILE="${ROOT_DIR}/raspitalk-installer.run"
 
 info() { echo "[INFO] $*"; }
 error() { echo "[ERROR] $*" >&2; exit 1; }
@@ -27,21 +27,21 @@ info "Building RaspiTalk installer..."
 
 # Copy application files into the build directory
 info "Copying application files..."
-cp -r "${SCRIPT_DIR}/src" "${BUILD_DIR}/"
-cp -r "${SCRIPT_DIR}/resources" "${BUILD_DIR}/"
-cp -r "${SCRIPT_DIR}/launchers" "${BUILD_DIR}/"
-cp -r "${SCRIPT_DIR}/tools" "${BUILD_DIR}/"
-cp "${SCRIPT_DIR}/main.py" "${BUILD_DIR}/"
-cp "${SCRIPT_DIR}/pyproject.toml" "${BUILD_DIR}/"
-cp "${SCRIPT_DIR}/uv.lock" "${BUILD_DIR}/"
-cp "${SCRIPT_DIR}/.python-version" "${BUILD_DIR}/"
-cp "${SCRIPT_DIR}/install.sh" "${BUILD_DIR}/"
-cp "${SCRIPT_DIR}/uninstall.sh" "${BUILD_DIR}/"
+cp -r "${ROOT_DIR}/src" "${BUILD_DIR}/"
+cp -r "${ROOT_DIR}/resources" "${BUILD_DIR}/"
+cp -r "${ROOT_DIR}/launchers" "${BUILD_DIR}/"
+cp -r "${ROOT_DIR}/tools" "${BUILD_DIR}/"
+cp "${ROOT_DIR}/main.py" "${BUILD_DIR}/"
+cp "${ROOT_DIR}/pyproject.toml" "${BUILD_DIR}/"
+cp "${ROOT_DIR}/uv.lock" "${BUILD_DIR}/"
+cp "${ROOT_DIR}/.python-version" "${BUILD_DIR}/"
+cp "${ROOT_DIR}/install.sh" "${BUILD_DIR}/"
+cp "${ROOT_DIR}/uninstall.sh" "${BUILD_DIR}/"
 chmod +x "${BUILD_DIR}/install.sh" "${BUILD_DIR}/uninstall.sh"
 
 # Build the self-extracting installer
 info "Creating self-extracting archive..."
-makeself "${BUILD_DIR}" "${OUTPUT_FILE}" "RaspiTalk Installer" ./install.sh
+makeself "${BUILD_DIR}" "${OUTPUT_FILE}" "Raspitalk Installer" ./install.sh
 
 info "Installer built: ${OUTPUT_FILE}"
 info ""
