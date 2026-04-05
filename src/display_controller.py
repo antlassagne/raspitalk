@@ -41,6 +41,7 @@ class DisplayController:
             DISPLAY_MODE.DEV: "",
             DISPLAY_MODE.VISUAL: "previous",  # special flag that will be reassigned to the last image displayed
             MENU_STATE.LOADING: "./resources/lowres/loading_320.jpg",
+            MENU_STATE.PAUSED: "",
         }
 
         self.log_queue: deque = deque(maxlen=MAX_AMOUNT_OF_LINES)
