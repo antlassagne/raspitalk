@@ -46,22 +46,14 @@ logging.basicConfig(
 from src.mic_controller import MicController
 from src.voice_controller import SOUND_FORMAT, VoiceController
 
-# file = "resources/stories/grimoireauxhistoires/Au-secour-un-monstre-MP3.wav"
-#file = "resources/stories/pomme-d-api-trimmed/006 - Les Trésors de Pomme d'Api La verdiole de la peur (bonus).wav"
-# file = "user_prompt_1.wav"
-file= "/home/pi/Documents/rapilunii/resources/stories/test.mp3"
-file= "/home/pi/Documents/rapilunii/resources/stories/fearsome/3.mp3"
-voice_controller = VoiceController("http://localhost")
+file= f"{ROOT}/resources/stories/fearsome/3.mp3"
+voice_controller = VoiceController("http://localhost", lambda x: print("TTS ready callback called with file: {}".format(x)))
 
 listener_thread = Thread(target=run, daemon=True)
 listener_thread.start()
 
-# mic_controller = MicController()
-# mic_controller.start_recording(duration=5, output_file="input.{}".format(SOUND_FORMAT))
-# voice_controller.play_audio_file(file)
 voice_controller.push_to_playback_queue(file)
 voice_controller.received_final_chunk_to_play = True
-# play(file, async_mode=False)
 print("Done")
 
 # sound_id = play(file, async_mode=False)
