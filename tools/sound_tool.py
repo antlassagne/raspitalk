@@ -46,8 +46,11 @@ logging.basicConfig(
 from src.mic_controller import MicController
 from src.voice_controller import SOUND_FORMAT, VoiceController
 
-file= f"{ROOT}/resources/stories/fearsome/3.mp3"
-voice_controller = VoiceController("http://localhost", lambda x: print("TTS ready callback called with file: {}".format(x)))
+file = f"{ROOT}/resources/stories/fearsome/3.mp3"
+voice_controller = VoiceController(
+    "http://localhost",
+    lambda x: print("TTS ready callback called with file: {}".format(x)),
+)
 
 listener_thread = Thread(target=run, daemon=True)
 listener_thread.start()

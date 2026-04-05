@@ -3,11 +3,11 @@ permissions:
   contents: read
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
-  check-with-ruff:
+  ruff-format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -16,3 +16,4 @@ jobs:
       - uses: astral-sh/ruff-action@v3
         with:
           args: "format --check --diff"
+

@@ -1,4 +1,6 @@
 import logging
+import os
+import threading
 
 import requests  # type: ignore
 
@@ -17,6 +19,18 @@ from src.states import (
 )
 from src.types import ErrorCode
 from src.voice_controller import VoiceController
+
+
+def _thread_excepthook(args: threading.ExceptHookArgs):
+    logging.exception(
+        "Unhandled exception in thread '%s', exiting.",
+        args.thread.name if args.thread else "unknown",
+        exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+    )
+    os._exit(1)
+
+
+threading.excepthook = _thread_excepthook
 
 
 class LuniiController:
@@ -83,10 +97,14 @@ class LuniiController:
                 logging.info("Custom handler removed.")
 
     def handle_input(self, key_code: int):
-        logging.debug("Handling input")
-        state = self.state_machine.next_state(INPUT_CONTROLLER_ACTION(key_code))
-        logging.info("State change: {}".format(state))
-        self.on_state_changed(state)
+        try:
+            logging.debug("Handling input")
+            state = self.state_machine.next_state(INPUT_CONTROLLER_ACTION(key_code))
+            logging.info("State change: {}".format(state))
+            self.on_state_changed(state)
+        except Exception:
+            logging.exception("Unhandled exception in handle_input, exiting.")
+            os._exit(1)
 
     def on_state_changed(
         self, state: WORKING_LANGUAGE | WORKING_MODE | DISPLAY_MODE | MENU_STATE
