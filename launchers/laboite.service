@@ -5,6 +5,7 @@ After=network.target sound.target
 [Service]
 Type=simple
 WorkingDirectory=/usr/local/raspitalk
+Environment="PYTHONUNBUFFERED=1"
 ExecStart=/usr/local/raspitalk/.venv/bin/python3 main.py
 Restart=on-failure
 RestartSec=10
