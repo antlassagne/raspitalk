@@ -3,8 +3,6 @@ import sys
 import time
 from enum import Enum
 
-from PyQt6.QtCore import QObject
-
 from src.input_controller import INPUT_CONTROLLER_ACTION
 
 
@@ -45,7 +43,7 @@ class DISPLAY_MODE(Enum):
     DEV = 1
 
 
-class InputControllerStateMachine(QObject):
+class InputControllerStateMachine():
     menu_state = MENU_STATE.MODE_CHOICE
     working_mode = WORKING_MODE.CONVERSATION_MODE
     working_language = WORKING_LANGUAGE.FRENCH
@@ -54,7 +52,6 @@ class InputControllerStateMachine(QObject):
     is_ai_available: bool = True
 
     def __init__(self, is_ai_available: bool):
-        super().__init__()
         self.is_ai_available = is_ai_available
         if not self.is_ai_available:
             self.working_mode = WORKING_MODE.RANDOM_RECORDING_MODE

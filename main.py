@@ -4,8 +4,7 @@ import logging
 import os
 import signal
 import sys
-
-from PyQt6.QtCore import QCoreApplication, QTimer
+import time
 
 from src.lunii_controller import LuniiController
 
@@ -27,8 +26,6 @@ logging.basicConfig(
 
 
 if __name__ == "__main__":
-    app = QCoreApplication(sys.argv)
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--remote_worker_ip",
@@ -54,14 +51,10 @@ if __name__ == "__main__":
         lunii.input.stop()
         lunii.display.stop()
         # lunii.mic.stop()
-
-        QCoreApplication.quit()
+        sys.exit(0)
 
     # Handle Ctrl+C gracefully
     signal.signal(signal.SIGINT, signal_handler)
 
-    # Create a timer to allow signal processing
-    timer = QTimer()
-    timer.timeout.connect(lambda: None)
-    timer.start(100)
-    sys.exit(app.exec())
+    while 1:
+        time.sleep(1)

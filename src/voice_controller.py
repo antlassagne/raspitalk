@@ -4,6 +4,7 @@ import time
 from enum import Enum
 from pathlib import Path
 from queue import Queue
+from typing import Callable
 
 import httpx
 import requests  # type: ignore
@@ -78,9 +79,10 @@ class VoiceController:
     # Queue for playback worker
     playback_queue: Queue = Queue(maxsize=1000)
 
-    def __init__(self, host: str):
-        self.on_tts_ready = None
-        self.on_job_done = None
+    on_tts_ready = None
+
+    def __init__(self, host: str, on_tts_ready_callback: Callable[[str], None]):
+        self.on_tts_ready = on_tts_ready_callback
 
         self.received_final_chunk = False
         self.received_final_chunk_to_play = False
@@ -171,7 +173,9 @@ class VoiceController:
             logging.info("> TTS worker got text: {}".format(text))
             output_file = "user_prompt_{}.{}".format(id, SOUND_FORMAT)
             self.text_to_speech(text, output_file)
-            if self.on_tts_ready:
+            if self.on_tts_ready is None:
+                raise Exception("Callback for TTS ready not set")
+            else:
                 self.on_tts_ready(output_file)
             self.tts_queue.task_done()
 
@@ -190,13 +194,7 @@ class VoiceController:
             if self.playback_queue.empty():
                 if self.received_final_chunk_to_play:
                     # this was the final thing to do.
-                    try:
-                        if self.on_job_done:
-                            self.on_job_done()
-                    except Exception:
-                        logging.exception("> on_job_done callback failed")
-                    finally:
-                        self.reset()
+                    self.reset()
 
     def text_to_speech(self, text: str, output_file: str):
         logging.info("> TTS starting TTS request")

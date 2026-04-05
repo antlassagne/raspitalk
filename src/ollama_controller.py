@@ -1,9 +1,8 @@
 import logging
 import threading
+from typing import Callable
 
 from ollama import Client
-from PyQt6.QtCore import QObject
-from PyQt6.QtCore import pyqtSignal as Signal
 
 from src.states import WORKING_MODE
 from src.types import ErrorCode
@@ -12,11 +11,11 @@ SENTENCES_SPLITTERS = [".", "!", "?"]
 MINIMUM_SENTENCE_LENGTH = 20
 
 
-class OllamaController(QObject):
-    # Signal emitted when a new story chunk is ready in async mode
-    # manually triggered un sync mode
-    story_chunk_ready = Signal(str)
-    generation_finished = Signal()
+class OllamaController:
+    # Callbacks triggered when a new story chunk is ready in async mode
+    # manually triggered in sync mode
+    story_chunk_ready = None
+    generation_finished = None
 
     # contains the story chunk that is ready to be published, or None
     story_to_publish = None
@@ -26,11 +25,19 @@ class OllamaController(QObject):
 
     running = False
 
-    def __init__(self, host: str):
+    def __init__(
+        self,
+        host: str,
+        story_chunk_ready_callback: Callable[[str], None],
+        generation_finished_callback: Callable[[], None],
+    ):
         super().__init__()
         logging.info("Hello OllamaController!")
 
         self.client = Client(host="{}:11434".format(host))
+
+        self.story_chunk_ready = story_chunk_ready_callback
+        self.generation_finished = generation_finished_callback
 
         # fast, very ad quality
         # self.story_model = "wizardlm2:7b"
@@ -49,9 +56,14 @@ class OllamaController(QObject):
         logging.info(f"Converting text to speech: {text}")
 
     def refine_and_publish_story_if_ready(self):
+        if self.story_chunk_ready is None:
+            raise Exception("story_chunk_ready callback not set")
+
         if self.refine_story():
+            if self.story_to_publish is None:
+                raise Exception("Story to publish should not be None here")
             logging.info("\nStory chunk ready: {}".format(self.story_to_publish))
-            self.story_chunk_ready.emit(self.story_to_publish)
+            self.story_chunk_ready(self.story_to_publish)
             self.story_to_publish = None
 
     def refine_story(self):
@@ -122,7 +134,10 @@ class OllamaController(QObject):
                 self.refine_and_publish_story_if_ready()
         if async_mode:
             # don't emit this in non async mode, or it may be treated before the chunk is actually worked on
-            self.generation_finished.emit()
+            if self.generation_finished is None:
+                raise Exception("Callback for generation finished not set")
+
+            self.generation_finished()
 
         logging.info("Story generation complete: {}".format(untouched_story))
         self.running = False

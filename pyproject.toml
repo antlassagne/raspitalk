@@ -15,8 +15,9 @@ dependencies = [
     "pvrecorder>=1.2.7",
     "pyaudio>=0.2.14",
     "pynput>=1.8.1",
-    "pyqt6>=6.10.0",
     "requests>=2.32.5",
+    "ruff>=0.15.9",
     "spidev>=3.8",
+    "ty>=0.0.28",
     "types-requests>=2.32.4.20250913",
 ]
