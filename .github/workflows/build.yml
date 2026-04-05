@@ -1,0 +1,26 @@
+name: Build Installer
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-installer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install makeself
+        run: sudo apt-get update -qq && sudo apt-get install -y makeself
+
+      - name: Build installer
+        run: bash deployment/build_installer.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: raspitalk-installer
+          path: raspitalk-installer.run
