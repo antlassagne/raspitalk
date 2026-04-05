@@ -42,6 +42,7 @@ if __name__ == "__main__":
         help="Wait the whole text generation before running the TTS and playback",
     )
     args = parser.parse_args()
+    exit(0)
 
     lunii = LuniiController(args)
 

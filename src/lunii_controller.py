@@ -4,7 +4,6 @@ import threading
 
 import requests  # type: ignore
 
-from src.display_controller import DisplayController
 from src.input_controller import INPUT_CONTROLLER_ACTION, InputController
 from src.logging_handler import CallbackHandler
 from src.mic_controller import MicController
@@ -21,6 +20,9 @@ from src.types import ErrorCode
 from src.voice_controller import VoiceController
 
 USE_DISPLAY = os.getenv("USE_DISPLAY", "true").lower() == "true"
+if USE_DISPLAY:
+    from src.display_controller import DisplayController
+
 
 def _thread_excepthook(args: threading.ExceptHookArgs):
     logging.exception(
@@ -78,6 +80,16 @@ class LuniiController:
         self.input = InputController(self.handle_input)
         self.state_machine = InputControllerStateMachine(self.ai_available)
         self.recordings = RecordingsController()
+
+        # startup sound
+        file = self.recordings.get_random_recording_by_category(
+                        self.state_machine.recording_category
+                    )
+
+        self.voice.push_to_playback_queue(file)
+        self.voice.received_final_chunk_to_play = True
+        print("Done")
+
 
         # all the commands that are following are handy for debugging so I keep them here commented
         # input_text = self.voice.speech_to_text(self.mic.temp_file)
