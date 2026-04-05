@@ -69,19 +69,13 @@ class STT_IMPL(Enum):
 
 
 class VoiceController:
-    playback = Playback()
-
     tts_mode = TTS_IMPL.SPEACHES
     stt_mode = STT_IMPL.SPEACHES
 
-    # Queue for TTS worker
-    tts_queue: Queue = Queue(maxsize=1000)
-    # Queue for playback worker
-    playback_queue: Queue = Queue(maxsize=1000)
-
-    on_tts_ready = None
-
     def __init__(self, host: str, on_tts_ready_callback: Callable[[str], None]):
+        self.playback = Playback()
+        self.tts_queue: Queue = Queue(maxsize=1000)
+        self.playback_queue: Queue = Queue(maxsize=1000)
         self.on_tts_ready = on_tts_ready_callback
 
         self.received_final_chunk = False
@@ -297,13 +291,8 @@ class VoiceController:
         logging.info(f"Playing audio file: {audio_file_path}")
         self.playback.load_file(audio_file_path)
         self.playback.play()
-        self.playback.pause()
-        self.playback.seek(0)
-        self.playback.resume()
 
         while self.playback.active:
             time.sleep(0.2)
-
-        time.sleep(1)  # small delay to ensure smooth playback
 
         logging.info("Finished playing audio file: {}".format(audio_file_path))
