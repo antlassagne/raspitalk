@@ -56,7 +56,12 @@ class RaspberryPi:
 
         self.RST_PIN = self.gpio_mode(rst, self.OUTPUT)
         self.DC_PIN = self.gpio_mode(dc, self.OUTPUT)
-        self.BL_PIN = self.gpio_pwm(bl)
+        # Use DigitalOutputDevice instead of PWMOutputDevice for the
+        # backlight so that GPIO 18 is not reconfigured as PWM.  GPIO 18 is
+        # shared with the I2S BCLK used by the ReSpeaker audio HAT; driving
+        # it with PWM corrupts the I2S clock and breaks audio playback.
+        # The trade-off is losing variable brightness (backlight is on/off).
+        self.BL_PIN = self.gpio_mode(bl, self.OUTPUT)
         self.bl_DutyCycle(0)
 
         # Initialize SPI
@@ -91,10 +96,12 @@ class RaspberryPi:
             self.SPI.writebytes(data)
 
     def bl_DutyCycle(self, duty):
-        self.BL_PIN.value = duty / 100
+        # DigitalOutputDevice only supports on (1) / off (0).
+        self.BL_PIN.value = 1 if duty > 0 else 0
 
     def bl_Frequency(self, freq):  # Hz
-        self.BL_PIN.frequency = freq
+        # No-op: DigitalOutputDevice does not support frequency control.
+        pass
 
     def module_init(self):
         if self.SPI != None:
