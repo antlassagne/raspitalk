@@ -43,7 +43,7 @@ class DISPLAY_MODE(Enum):
     DEV = 1
 
 
-class InputControllerStateMachine():
+class InputControllerStateMachine:
     menu_state = MENU_STATE.MODE_CHOICE
     working_mode = WORKING_MODE.CONVERSATION_MODE
     working_language = WORKING_LANGUAGE.FRENCH

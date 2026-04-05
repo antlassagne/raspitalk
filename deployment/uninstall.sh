@@ -5,7 +5,8 @@ set -euo pipefail
 # Removes the RaspiTalk application from the system
 
 INSTALL_DIR="/usr/local/raspitalk"
-SERVICE_FILE="laboite.service"
+SERVICE_USER="raspitalk"
+SERVICE_NAME="laboite@${SERVICE_USER}"
 
 info() { echo "[INFO] $*"; }
 warn() { echo "[WARN] $*"; }
@@ -18,22 +19,29 @@ fi
 
 info "Uninstalling RaspiTalk..."
 
-# --- Step 1: Stop and disable the service ---
-if systemctl is-active --quiet "${SERVICE_FILE}" 2>/dev/null; then
-    info "Stopping ${SERVICE_FILE}..."
-    systemctl stop "${SERVICE_FILE}"
-fi
+# --- Step 1: Stop and disable the user service ---
+if id "${SERVICE_USER}" &>/dev/null; then
+    USER_HOME=$(eval echo "~${SERVICE_USER}")
 
-if systemctl is-enabled --quiet "${SERVICE_FILE}" 2>/dev/null; then
-    info "Disabling ${SERVICE_FILE}..."
-    systemctl disable "${SERVICE_FILE}"
-fi
+    if sudo -u "${SERVICE_USER}" systemctl --user is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
+        info "Stopping ${SERVICE_NAME}..."
+        sudo -u "${SERVICE_USER}" systemctl --user stop "${SERVICE_NAME}"
+    fi
 
-# --- Step 2: Remove the service file ---
-if [ -f "/etc/systemd/system/${SERVICE_FILE}" ]; then
-    info "Removing service file..."
-    rm "/etc/systemd/system/${SERVICE_FILE}"
-    systemctl daemon-reload
+    if sudo -u "${SERVICE_USER}" systemctl --user is-enabled --quiet "${SERVICE_NAME}" 2>/dev/null; then
+        info "Disabling ${SERVICE_NAME}..."
+        sudo -u "${SERVICE_USER}" systemctl --user disable "${SERVICE_NAME}"
+    fi
+
+    # --- Step 2: Remove the service file ---
+    SERVICE_PATH="${USER_HOME}/.config/systemd/user/laboite@.service"
+    if [ -f "${SERVICE_PATH}" ]; then
+        info "Removing service file..."
+        rm "${SERVICE_PATH}"
+        sudo -u "${SERVICE_USER}" systemctl --user daemon-reload
+    fi
+else
+    warn "User '${SERVICE_USER}' does not exist, skipping service cleanup."
 fi
 
 # --- Step 3: Remove the installation directory ---
@@ -42,4 +50,4 @@ if [ -d "${INSTALL_DIR}" ]; then
     rm -rf "${INSTALL_DIR}"
 fi
 
-info "RaspiTalk has been uninstalled."
+info "Raspitalk has been uninstalled."
