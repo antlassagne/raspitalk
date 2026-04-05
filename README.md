@@ -45,33 +45,39 @@ The application must run as a **systemd user service** so that it has access to 
 user audio session (PulseAudio / PipeWire). A regular system service cannot reach the
 sound devices.
 
+0. Copy the program
+```bash
+cp ../raspitalk /usr/local/
+cd /usr/local/raspitalk && uv sync
+```
+
 1. Copy the service file into the user systemd directory:
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp launchers/laboite.service ~/.config/systemd/user/
+cp launchers/laboite.service ~/.config/systemd/user/laboite@.service
 ```
 
-2. Enable **lingering** for the `pi` user so the service starts at boot without
+2. Enable **lingering** for the `raspitalk` user so the service starts at boot without
    requiring a login session:
 
 ```bash
-sudo loginctl enable-linger pi
+sudo useradd raspitalk
+sudo loginctl enable-linger raspitalk
 ```
 
 3. Enable and start the service:
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable laboite.service
-systemctl --user start laboite.service
+systemctl --user enable --now laboite@raspitalk
 ```
 
 4. Check the service status and logs:
 
 ```bash
-systemctl --user status laboite.service
-journalctl --user -u laboite.service -f
+systemctl --user status laboite@raspitalk
+journalctl --user -u laboite@raspitalk -f
 ```
 
 ### On the big bad remote machine
