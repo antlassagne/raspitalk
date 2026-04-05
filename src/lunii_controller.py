@@ -32,6 +32,7 @@ def _thread_excepthook(args: threading.ExceptHookArgs):
 
 threading.excepthook = _thread_excepthook
 
+
 class LuniiController:
     def __init__(self, args):
         self.display = DisplayController()
