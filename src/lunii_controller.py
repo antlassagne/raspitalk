@@ -20,6 +20,7 @@ from src.states import (
 from src.types import ErrorCode
 from src.voice_controller import VoiceController
 
+USE_DISPLAY = os.getenv("USE_DISPLAY", "true").lower() == "true"
 
 def _thread_excepthook(args: threading.ExceptHookArgs):
     logging.exception(
@@ -35,12 +36,14 @@ threading.excepthook = _thread_excepthook
 
 class LuniiController:
     def __init__(self, args):
-        self.display = DisplayController()
+        if USE_DISPLAY:
+            self.display = DisplayController()
 
-        # send every log to the display
-        hook_handler = CallbackHandler(callback=self.display.push_log_to_display_queue)
-        logger = logging.getLogger()
-        logger.addHandler(hook_handler)
+            # send every log to the display
+            hook_handler = CallbackHandler(callback=self.display.push_log_to_display_queue)
+            logger = logging.getLogger()
+            logger.addHandler(hook_handler)
+
         self.ai_available = True
 
         host = args.remote_worker_ip
@@ -84,7 +87,8 @@ class LuniiController:
         # self.voice.push_to_tts_queue(test)
         # text = "je voudrais une histoire sur les étoiles avec des chiens et des chats, en 5 phrases."
         # story = self.ollama.generate_text_response(text, WORKING_MODE.STORY_MODE, True)
-        self.display.update(self.state_machine.working_mode)
+        if USE_DISPLAY:
+            self.display.update(self.state_machine.working_mode)
         logging.info("La Boite est prête!")
 
     def stop_logger(self):
@@ -110,7 +114,8 @@ class LuniiController:
         self, state: WORKING_LANGUAGE | WORKING_MODE | DISPLAY_MODE | MENU_STATE
     ):
         # first, in any case, update the display
-        self.display.update(state)
+        if USE_DISPLAY:
+            self.display.update(state)
 
         # then, handle the other controllers
         if isinstance(state, WORKING_MODE):
