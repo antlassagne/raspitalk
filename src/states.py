@@ -70,7 +70,7 @@ class InputControllerStateMachine:
             Exception: if it's a state whose transition is not implemented correctly.
         """
         if input_event == INPUT_CONTROLLER_ACTION.LEFT_BUTTON_TOGGLE:
-            logging.info("Transitioning state on LEFT_BUTTON_TOGGLE")
+            logging.info(f"Transitioning state from {self.menu_state} on LEFT_BUTTON_TOGGLE")
             if self.menu_state == MENU_STATE.MODE_CHOICE:
                 # switch working mode
                 self.working_mode = WORKING_MODE(int(self.working_mode.value) + 1)
@@ -100,7 +100,7 @@ class InputControllerStateMachine:
                 return self.working_mode
 
             # to cancel generation/playback
-            elif self.menu_state == MENU_STATE.GENERATING_PROMPT:
+            elif self.menu_state in (MENU_STATE.GENERATING_PROMPT, MENU_STATE.PAUSED):
                 self.menu_state = MENU_STATE.MODE_CHOICE
                 return self.working_mode
 
@@ -170,4 +170,4 @@ class InputControllerStateMachine:
 
             sys.exit(1)
 
-        raise Exception("Unhandled state.")
+        raise Exception(f"Unhandled state: {self.menu_state} with input event: {input_event}")
