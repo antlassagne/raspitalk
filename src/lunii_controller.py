@@ -28,10 +28,16 @@ def _thread_excepthook(args: threading.ExceptHookArgs):
     logging.exception(
         "Unhandled exception in thread '%s', exiting.",
         args.thread.name if args.thread else "unknown",
-        exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+        exc_info=args.exc_value,
     )
     os._exit(1)
 
+def get_startup_sound_file():
+    # Get absolute path to project root (parent of src/)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(
+        project_root, "resources", "startup.mp3"
+    )
 
 threading.excepthook = _thread_excepthook
 
@@ -42,7 +48,9 @@ class LuniiController:
             self.display = DisplayController()
 
             # send every log to the display
-            hook_handler = CallbackHandler(callback=self.display.push_log_to_display_queue)
+            hook_handler = CallbackHandler(
+                callback=self.display.push_log_to_display_queue
+            )
             logger = logging.getLogger()
             logger.addHandler(hook_handler)
 
@@ -82,14 +90,8 @@ class LuniiController:
         self.recordings = RecordingsController()
 
         # startup sound
-        file = self.recordings.get_random_recording_by_category(
-                        self.state_machine.recording_category
-                    )
-
-        self.voice.push_to_playback_queue(file)
+        self.voice.push_to_playback_queue(get_startup_sound_file())
         self.voice.received_final_chunk_to_play = True
-        print("Done")
-
 
         # all the commands that are following are handy for debugging so I keep them here commented
         # input_text = self.voice.speech_to_text(self.mic.temp_file)
@@ -99,7 +101,7 @@ class LuniiController:
         # self.voice.push_to_tts_queue(test)
         # text = "je voudrais une histoire sur les étoiles avec des chiens et des chats, en 5 phrases."
         # story = self.ollama.generate_text_response(text, WORKING_MODE.STORY_MODE, True)
-        if USE_DISPLAY:
+        if self.display:
             self.display.update(self.state_machine.working_mode)
         logging.info("La Boite est prête!")
 
@@ -126,7 +128,7 @@ class LuniiController:
         self, state: WORKING_LANGUAGE | WORKING_MODE | DISPLAY_MODE | MENU_STATE
     ):
         # first, in any case, update the display
-        if USE_DISPLAY:
+        if self.display:
             self.display.update(state)
 
         # then, handle the other controllers
