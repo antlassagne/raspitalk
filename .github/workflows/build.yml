@@ -5,18 +5,38 @@ on: [push, pull_request]
 jobs:
   build-installer:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            run_on_arch: false
+          - arch: armv7
+            run_on_arch: true
+            distro: ubuntu_latest
+          - arch: aarch64
+            run_on_arch: true
+            distro: ubuntu_latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install makeself
-        run: sudo apt-get update -qq && sudo apt-get install -y makeself
+      - name: Install makeself and build installer (native)
+        if: ${{ !matrix.run_on_arch }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y makeself
+          ./deployment/build_installer.sh
 
-      - name: Build installer
-        run: ./deployment/build_installer.sh
+      - name: Build installer (ARM)
+        if: ${{ matrix.run_on_arch }}
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.distro }}
+          install: apt-get update -qq && apt-get install -y makeself
+          run: ./deployment/build_installer.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: raspitalk-installer
+          name: raspitalk-installer-${{ matrix.arch }}
           path: raspitalk-installer.run
