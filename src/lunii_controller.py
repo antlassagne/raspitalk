@@ -6,18 +6,17 @@ import requests  # type: ignore
 
 from src.input_controller import INPUT_CONTROLLER_ACTION, InputController
 from src.logging_handler import CallbackHandler
-from src.mic_controller import MicController
-from src.ollama_controller import OllamaController
+from src.playback_controller import PlaybackController
 from src.recordings_controller import RecordingsController
 from src.states import (
     DISPLAY_MODE,
     MENU_STATE,
+    RANDOM_CATEGORIES,
     WORKING_LANGUAGE,
     WORKING_MODE,
     InputControllerStateMachine,
 )
 from src.types import ErrorCode
-from src.voice_controller import VoiceController
 
 USE_DISPLAY = os.getenv("USE_DISPLAY", "true").lower() == "true"
 if USE_DISPLAY:
@@ -44,6 +43,7 @@ threading.excepthook = _thread_excepthook
 
 class LuniiController:
     def __init__(self, args):
+        self.display = None
         if USE_DISPLAY:
             self.display = DisplayController()
 
@@ -55,43 +55,61 @@ class LuniiController:
             logger.addHandler(hook_handler)
 
         self.ai_available = True
+        self.async_mode = False
 
         host = args.remote_worker_ip
-        self.async_mode = not args.sync_mode
-        if host and host.startswith("http") is False:
-            host = "http://{}".format(host)
-        logging.info("Remote worker IP: {}".format(host))
-        logging.info("Async mode: {}".format(self.async_mode))
-
-        # ping the default client and see if I need to fallback (dev only)
-        try:
-            r = requests.get("{}:11434".format(host))  # ollama
-            r2 = requests.get("{}:8000/health".format(host))  # speaches
-            if r.status_code == 200 and r2.status_code == 200:
-                logging.info("Running the remote backend.")
-            else:
-                logging.info("Server not reachable.")
-                self.ai_available = False
-        except Exception as e:
-            logging.info("Server not reachable: {}".format(e))
+        if not host:
+            logging.info("No remote worker IP provided. AI features disabled.")
             self.ai_available = False
+        else:
+            self.async_mode = not args.sync_mode
+            if host.startswith("http") is False:
+                host = "http://{}".format(host)
+            logging.info("Remote worker IP: {}".format(host))
+            logging.info("Async mode: {}".format(self.async_mode))
 
-        self.ollama = OllamaController(
-            host=host,
-            story_chunk_ready_callback=self.on_story_chunk_available,
-            generation_finished_callback=self.on_story_generation_finished,
-        )
-        self.voice = VoiceController(
-            host=host, on_tts_ready_callback=self.on_story_tts_available
-        )
-        self.mic = MicController()
+            # ping the default client and see if I need to fallback (dev only)
+            try:
+                r = requests.get("{}:11434".format(host))  # ollama
+                r2 = requests.get("{}:8000/health".format(host))  # speaches
+                if r.status_code == 200 and r2.status_code == 200:
+                    logging.info("Running the remote backend.")
+                else:
+                    logging.info("Server not reachable.")
+                    self.ai_available = False
+            except Exception as e:
+                logging.info("Server not reachable: {}".format(e))
+                self.ai_available = False
+
+        self.voice = None
+        self.ollama = None
+        self.mic = None
+
+        if self.ai_available:
+            from src.mic_controller import MicController
+            from src.ollama_controller import OllamaController
+            from src.voice_controller import VoiceController
+
+            self.ollama = OllamaController(
+                host=host,
+                story_chunk_ready_callback=self.on_story_chunk_available,
+                generation_finished_callback=self.on_story_generation_finished,
+            )
+            self.voice = VoiceController(
+                host=host,
+                on_tts_ready_callback=self.on_story_tts_available,
+                on_final_tts_processed_callback=self.on_final_tts_processed,
+            )
+            self.mic = MicController()
+
+        self.playback = PlaybackController()
         self.input = InputController(self.handle_input)
         self.state_machine = InputControllerStateMachine(self.ai_available)
         self.recordings = RecordingsController()
 
         # startup sound
-        self.voice.push_to_playback_queue(get_startup_sound_file())
-        self.voice.received_final_chunk_to_play = True
+        self.playback.push_to_playback_queue(get_startup_sound_file())
+        self.playback.received_final_chunk_to_play = True
 
         # all the commands that are following are handy for debugging so I keep them here commented
         # input_text = self.voice.speech_to_text(self.mic.temp_file)
@@ -102,7 +120,10 @@ class LuniiController:
         # text = "je voudrais une histoire sur les étoiles avec des chiens et des chats, en 5 phrases."
         # story = self.ollama.generate_text_response(text, WORKING_MODE.STORY_MODE, True)
         if self.display:
-            self.display.update(self.state_machine.working_mode)
+            if self.ai_available:
+                self.display.update(self.state_machine.working_mode)
+            else:
+                self.display.update(self.state_machine.recording_category)
         logging.info("La Boite est prête!")
 
     def stop_logger(self):
@@ -134,25 +155,31 @@ class LuniiController:
         # then, handle the other controllers
         if isinstance(state, WORKING_MODE):
             # we are in the very begging. Making sure nothing is started.
-            self.mic.stop()
-            self.voice.reset()
+            self.playback.reset()
+            if self.ai_available:
+                self.mic.stop()
+                self.voice.reset()
+
+        if isinstance(state, RANDOM_CATEGORIES):
+            # returning to category selection (e.g. after cancel), stop playback
+            self.playback.reset()
 
         if isinstance(state, MENU_STATE):
-            if state == MENU_STATE.LISTENING_PROMPT:
+            if state == MENU_STATE.LISTENING_PROMPT and self.mic:
                 self.mic.start_listening()
 
             if state == MENU_STATE.PAUSED:
-                self.voice.pause_audio_playback()
+                self.playback.pause_audio_playback()
 
-            if state == MENU_STATE.LISTENING_PROMPT_FINISHED:
+            if state == MENU_STATE.LISTENING_PROMPT_FINISHED and self.mic:
                 self.mic.stop()
                 logging.info(
                     "Waiting for the validation / cancellation of the prompt..."
                 )
 
             if state == MENU_STATE.GENERATING_PROMPT:
-                if self.voice.is_playback_paused():
-                    self.voice.resume_audio_playback()
+                if self.playback.is_playback_paused():
+                    self.playback.resume_audio_playback()
                     return
 
                 if (
@@ -164,21 +191,26 @@ class LuniiController:
                         self.state_machine.recording_category
                     )
                     if recording_file:
-                        self.voice.push_to_playback_queue(recording_file)
-                        self.voice.received_final_chunk_to_play = True
+                        self.playback.push_to_playback_queue(recording_file)
+                        self.playback.received_final_chunk_to_play = True
                     else:
                         logging.info("No recordings available.")
-                else:
+                elif self.ai_available:
                     self.new_story_from_mic(self.async_mode)
 
             if state == MENU_STATE.MODE_CHOICE:
-                self.mic.stop()
-                self.voice.reset()
-                self.ollama.stop()
+                self.playback.reset()
+                if self.ai_available:
+                    self.mic.stop()
+                    self.voice.reset()
+                    self.ollama.stop()
 
     def on_story_tts_available(self, story_tts_filepath):
         logging.info("Story TTS available: {}".format(story_tts_filepath))
-        self.voice.push_to_playback_queue(story_tts_filepath)
+        self.playback.push_to_playback_queue(story_tts_filepath)
+
+    def on_final_tts_processed(self):
+        self.playback.signal_received_final_chunk_to_play()
 
     def on_story_generation_finished(self):
         self.voice.signal_received_final_text_chunk()

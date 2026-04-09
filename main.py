@@ -49,8 +49,11 @@ if __name__ == "__main__":
         print("\nSignal received, closing application...")
         lunii.stop_logger()
         lunii.input.stop()
-        lunii.display.stop()
-        # lunii.mic.stop()
+        if lunii.display:
+            lunii.display.stop()
+        lunii.playback.stop()
+        if lunii.ai_available and lunii.voice:
+            lunii.voice.stop()
         sys.exit(0)
 
     # Handle Ctrl+C gracefully

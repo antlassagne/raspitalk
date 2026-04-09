@@ -55,6 +55,7 @@ class InputControllerStateMachine:
         self.is_ai_available = is_ai_available
         if not self.is_ai_available:
             self.working_mode = WORKING_MODE.RANDOM_RECORDING_MODE
+            self.menu_state = MENU_STATE.PICKING_RECORDING_CATEGORY
         logging.info("InputControllerStateMachine initialized.")
 
     def next_state(self, input_event: INPUT_CONTROLLER_ACTION):
@@ -103,8 +104,12 @@ class InputControllerStateMachine:
 
             # to cancel generation/playback
             elif self.menu_state in (MENU_STATE.GENERATING_PROMPT, MENU_STATE.PAUSED):
-                self.menu_state = MENU_STATE.MODE_CHOICE
-                return self.working_mode
+                if self.is_ai_available:
+                    self.menu_state = MENU_STATE.MODE_CHOICE
+                    return self.working_mode
+                else:
+                    self.menu_state = MENU_STATE.PICKING_RECORDING_CATEGORY
+                    return self.recording_category
 
             # in the recording category picking, cycle categories
             elif self.menu_state == MENU_STATE.PICKING_RECORDING_CATEGORY:
@@ -160,8 +165,12 @@ class InputControllerStateMachine:
 
         elif input_event == INPUT_CONTROLLER_ACTION.LEFT_BUTTON_HELD:
             logging.info("Transitioning state on LEFT_BUTTON_HELD")
-            self.menu_state = MENU_STATE.MODE_CHOICE
-            return self.menu_state
+            if self.is_ai_available:
+                self.menu_state = MENU_STATE.MODE_CHOICE
+                return self.menu_state
+            else:
+                self.menu_state = MENU_STATE.PICKING_RECORDING_CATEGORY
+                return self.recording_category
 
         elif input_event == INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_HELD:
             logging.info("Transitioning state on MIDDLE_BUTTON_HELD")
