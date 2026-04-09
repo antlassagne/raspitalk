@@ -32,12 +32,12 @@ def _thread_excepthook(args: threading.ExceptHookArgs):
     )
     os._exit(1)
 
+
 def get_startup_sound_file():
     # Get absolute path to project root (parent of src/)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(
-        project_root, "resources", "startup.mp3"
-    )
+    return os.path.join(project_root, "resources", "startup.mp3")
+
 
 threading.excepthook = _thread_excepthook
 

@@ -70,7 +70,9 @@ class InputControllerStateMachine:
             Exception: if it's a state whose transition is not implemented correctly.
         """
         if input_event == INPUT_CONTROLLER_ACTION.LEFT_BUTTON_TOGGLE:
-            logging.info(f"Transitioning state from {self.menu_state} on LEFT_BUTTON_TOGGLE")
+            logging.info(
+                f"Transitioning state from {self.menu_state} on LEFT_BUTTON_TOGGLE"
+            )
             if self.menu_state == MENU_STATE.MODE_CHOICE:
                 # switch working mode
                 self.working_mode = WORKING_MODE(int(self.working_mode.value) + 1)
@@ -170,4 +172,6 @@ class InputControllerStateMachine:
 
             sys.exit(1)
 
-        raise Exception(f"Unhandled state: {self.menu_state} with input event: {input_event}")
+        raise Exception(
+            f"Unhandled state: {self.menu_state} with input event: {input_event}"
+        )

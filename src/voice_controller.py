@@ -84,7 +84,7 @@ class VoiceController:
         self.received_final_chunk = False
         self.received_final_chunk_to_play = False
         self.running = True
-        
+
         if ENABLE_AI:
             self.tts_queue: Queue = Queue(maxsize=1000)
             if self.stt_mode == STT_IMPL.FAST_WHISPER:
@@ -133,7 +133,6 @@ class VoiceController:
         self.received_final_chunk = False
         self.received_final_chunk_to_play = False
         self.stop_audio_playback()
-
 
     def stop(self):
         logging.info("Stopping VoiceController...")
