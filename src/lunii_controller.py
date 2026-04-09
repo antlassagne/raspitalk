@@ -123,7 +123,12 @@ class LuniiController:
             if self.ai_available:
                 self.display.update(self.state_machine.working_mode)
             else:
-                self.display.update(self.state_machine.recording_category)
+                self.display.update(MENU_STATE.GENERATING_PROMPT)
+
+        # in no-AI mode, auto-play a random story after the startup sound
+        if not self.ai_available:
+            self._play_next_random_story()
+
         logging.info("La Boite est prête!")
 
     def stop_logger(self):
@@ -138,12 +143,32 @@ class LuniiController:
     def handle_input(self, key_code: int):
         try:
             logging.debug("Handling input")
-            state = self.state_machine.next_state(INPUT_CONTROLLER_ACTION(key_code))
+            action = INPUT_CONTROLLER_ACTION(key_code)
+
+            # in no-AI mode, buttons directly control playback
+            if not self.ai_available:
+                self._handle_no_ai_input(action)
+                return
+
+            state = self.state_machine.next_state(action)
             logging.info("State change: {}".format(state))
             self.on_state_changed(state)
         except Exception:
             logging.exception("Unhandled exception in handle_input, exiting.")
             os._exit(1)
+
+    def _handle_no_ai_input(self, action: INPUT_CONTROLLER_ACTION):
+        if action == INPUT_CONTROLLER_ACTION.LEFT_BUTTON_TOGGLE:
+            self.playback.seek_relative(-15)
+        elif action == INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_TOGGLE:
+            self.playback.seek_relative(30)
+        elif action == INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_TOGGLE:
+            if self.playback.is_playback_paused():
+                self.playback.resume_audio_playback()
+            else:
+                self.playback.pause_audio_playback()
+        elif action == INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_HELD:
+            self._play_next_random_story()
 
     def on_state_changed(
         self, state: WORKING_LANGUAGE | WORKING_MODE | DISPLAY_MODE | MENU_STATE
@@ -220,6 +245,18 @@ class LuniiController:
         # remove the \n characters
         story_chunk = story_chunk.replace("\n", " ")
         self.voice.push_to_tts_queue(story_chunk)
+
+    def _play_next_random_story(self):
+        logging.info("Playing next random story...")
+        self.playback.reset()
+        recording_file = self.recordings.get_random_recording_by_category(
+            RANDOM_CATEGORIES.ALL
+        )
+        if recording_file:
+            self.playback.push_to_playback_queue(recording_file)
+            self.playback.received_final_chunk_to_play = True
+        else:
+            logging.info("No recordings available.")
 
     def new_story_from_mic(self, async_mode: bool = False):
         logging.info("Creating a new story...")

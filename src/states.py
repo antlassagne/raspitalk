@@ -55,7 +55,7 @@ class InputControllerStateMachine:
         self.is_ai_available = is_ai_available
         if not self.is_ai_available:
             self.working_mode = WORKING_MODE.RANDOM_RECORDING_MODE
-            self.menu_state = MENU_STATE.PICKING_RECORDING_CATEGORY
+            self.menu_state = MENU_STATE.GENERATING_PROMPT
         logging.info("InputControllerStateMachine initialized.")
 
     def next_state(self, input_event: INPUT_CONTROLLER_ACTION):

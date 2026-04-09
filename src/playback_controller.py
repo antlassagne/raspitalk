@@ -59,6 +59,16 @@ class PlaybackController:
                     # this was the final thing to do.
                     self.reset()
 
+    def seek_relative(self, offset_seconds: float):
+        """Seek forward or backward by the given number of seconds."""
+        if self.playback.active:
+            new_pos = self.playback.curr_pos + offset_seconds
+            new_pos = max(0, min(new_pos, self.playback.duration))
+            self.playback.seek(new_pos)
+            logging.info(
+                "Seeked to {:.1f}s (offset {:.0f}s)".format(new_pos, offset_seconds)
+            )
+
     def resume_audio_playback(self):
         logging.info("Resuming audio playback")
         if self.playback.paused:
