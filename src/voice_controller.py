@@ -1,4 +1,5 @@
 import logging
+import os
 import threading
 import time
 from enum import Enum
@@ -8,12 +9,15 @@ from typing import Callable
 
 import httpx
 import requests  # type: ignore
-from faster_whisper import WhisperModel
 from just_playback import Playback
 
 from src.alltalk_controller import AllTalkController
 
 SOUND_FORMAT = "wav"  # or "wav" or "mp3"
+ENABLE_AI = os.getenv("ENABLE_AI", "true").lower() == "true"
+
+if ENABLE_AI:
+    from faster_whisper import WhisperModel
 
 
 class SpeachesModel:
@@ -69,49 +73,52 @@ class STT_IMPL(Enum):
 
 
 class VoiceController:
-    playback = Playback()
-
     tts_mode = TTS_IMPL.SPEACHES
     stt_mode = STT_IMPL.SPEACHES
 
-    # Queue for TTS worker
-    tts_queue: Queue = Queue(maxsize=1000)
-    # Queue for playback worker
-    playback_queue: Queue = Queue(maxsize=1000)
-
-    on_tts_ready = None
-
     def __init__(self, host: str, on_tts_ready_callback: Callable[[str], None]):
+        self.playback = Playback()
+        self.playback_queue: Queue = Queue(maxsize=1000)
         self.on_tts_ready = on_tts_ready_callback
 
         self.received_final_chunk = False
         self.received_final_chunk_to_play = False
+        self.running = True
 
-        if self.stt_mode == STT_IMPL.FAST_WHISPER:
-            model_size = "large-v3"
-            model_size = "turbo"
-            # Run on GPU with FP16
-            self.model = WhisperModel(model_size, device="cpu", compute_type="float32")
-            # or run on GPU with INT8
-            # model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
-            # or run on CPU with INT8
-            # model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        if ENABLE_AI:
+            self.tts_queue: Queue = Queue(maxsize=1000)
+            if self.stt_mode == STT_IMPL.FAST_WHISPER:
+                model_size = "large-v3"
+                model_size = "turbo"
+                # Run on GPU with FP16
+                self.model = WhisperModel(
+                    model_size, device="cpu", compute_type="float32"
+                )
+                # or run on GPU with INT8
+                # model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
+                # or run on CPU with INT8
+                # model = WhisperModel(model_size, device="cpu", compute_type="int8")
 
-        if self.tts_mode == TTS_IMPL.SPEACHES or self.stt_mode == STT_IMPL.SPEACHES:
-            self.speaches_url = "{}:8000/".format(host)
-            logging.info("TTS server on {}".format(self.speaches_url))
-            self.tts_client = httpx.Client(base_url=self.speaches_url)
-            self.tts_model = kokoro_models.piper_tom
-            self.stt_model = "Kelno/whisper-large-v3-french-distil-dec16-ct2"
-        elif self.tts_mode != TTS_IMPL.SPEACHES:  ## these were just used during testing
-            self.coqui_tts_server = "{}:5002/api/tts".format(host)
-            self.alltalk_controller = AllTalkController()
+            if self.tts_mode == TTS_IMPL.SPEACHES or self.stt_mode == STT_IMPL.SPEACHES:
+                self.speaches_url = "{}:8000/".format(host)
+                logging.info("TTS server on {}".format(self.speaches_url))
+                self.tts_client = httpx.Client(base_url=self.speaches_url)
+                self.tts_model = kokoro_models.piper_tom
+                self.stt_model = "Kelno/whisper-large-v3-french-distil-dec16-ct2"
+            elif (
+                self.tts_mode != TTS_IMPL.SPEACHES
+            ):  ## these were just used during testing
+                self.coqui_tts_server = "{}:5002/api/tts".format(host)
+                self.alltalk_controller = AllTalkController()
 
-        self.remote_fast_whisper_stt_server = "{}:9876/api/v0/transcribe".format(host)
+            self.remote_fast_whisper_stt_server = "{}:9876/api/v0/transcribe".format(
+                host
+            )
+
+            self.tts_thread = threading.Thread(target=self.tts_worker, daemon=True)
+            self.tts_thread.start()
 
         self.running = True
-        self.tts_thread = threading.Thread(target=self.tts_worker, daemon=True)
-        self.tts_thread.start()
         self.playback_thread = threading.Thread(
             target=self.playback_worker, daemon=True
         )
@@ -126,15 +133,6 @@ class VoiceController:
         self.received_final_chunk = False
         self.received_final_chunk_to_play = False
         self.stop_audio_playback()
-        # self.stop()
-
-        # self.running = True
-        # self.tts_thread = threading.Thread(target=self.tts_worker, daemon=True)
-        # self.tts_thread.start()
-        # self.playback_thread = threading.Thread(
-        #     target=self.playback_worker, daemon=True
-        # )
-        # self.playback_thread.start()
 
     def stop(self):
         logging.info("Stopping VoiceController...")
@@ -198,80 +196,82 @@ class VoiceController:
 
     def text_to_speech(self, text: str, output_file: str):
         logging.info("> TTS starting TTS request")
+        if ENABLE_AI:
+            if self.tts_mode == TTS_IMPL.SPEACHES:
+                res = self.tts_client.post(
+                    "v1/audio/speech",
+                    json={
+                        "model": self.tts_model.model,
+                        "voice": self.tts_model.voice,
+                        "input": text,
+                        "response_format": SOUND_FORMAT,  # or mp3
+                        "speed": 1,
+                    },
+                ).raise_for_status()
+                with Path(output_file).open("wb") as f:
+                    f.write(res.read())
 
-        if self.tts_mode == TTS_IMPL.SPEACHES:
-            res = self.tts_client.post(
-                "v1/audio/speech",
-                json={
-                    "model": self.tts_model.model,
-                    "voice": self.tts_model.voice,
-                    "input": text,
-                    "response_format": SOUND_FORMAT,  # or mp3
-                    "speed": 1,
-                },
-            ).raise_for_status()
-            with Path(output_file).open("wb") as f:
-                f.write(res.read())
+            elif self.tts_mode == TTS_IMPL.ALLTALK:
+                _ = self.alltalk_controller.generate_tts(
+                    text,
+                    character_voice="female_06.wav",
+                    language="fr",
+                    output_file_name="test_output",
+                    output_file=output_file,
+                )
 
-        elif self.tts_mode == TTS_IMPL.ALLTALK:
-            _ = self.alltalk_controller.generate_tts(
-                text,
-                character_voice="female_06.wav",
-                language="fr",
-                output_file_name="test_output",
-                output_file=output_file,
-            )
+            else:
+                headers = {
+                    # "text": text,
+                    # "speaker-id": "0",
+                    "language-id": "fr",
+                    "style-wav": "",
+                }
+                params = {"text": text}
+                response = requests.post(
+                    self.coqui_tts_server, headers=headers, params=params
+                )
+                with open(output_file, "wb") as f:
+                    f.write(response.content)
 
-        else:
-            headers = {
-                # "text": text,
-                # "speaker-id": "0",
-                "language-id": "fr",
-                "style-wav": "",
-            }
-            params = {"text": text}
-            response = requests.post(
-                self.coqui_tts_server, headers=headers, params=params
-            )
-            with open(output_file, "wb") as f:
-                f.write(response.content)
-
-        logging.info(f" > TTS output saved to: {output_file}")
+            logging.info(f" > TTS output saved to: {output_file}")
 
     def speech_to_text(self, audio_file_path) -> str:
-        if self.stt_mode == STT_IMPL.FAST_WHISPER:
-            segments, info = self.model.transcribe(
-                audio_file_path, language="fr", beam_size=5
-            )
-
-            transcription = ""
-            for segment in segments:
-                logging.info(
-                    "Whisper > [%.2fs -> %.2fs] %s"
-                    % (segment.start, segment.end, segment.text)
+        if ENABLE_AI:
+            if self.stt_mode == STT_IMPL.FAST_WHISPER:
+                segments, info = self.model.transcribe(
+                    audio_file_path, language="fr", beam_size=5
                 )
-                transcription = segment.text + " "
 
-            logging.info("Whisper > Transcription complete.")
-            return transcription
-        elif self.stt_mode == STT_IMPL.REMOTE_FASTER_WHISPER:
-            files = {"audio_file": open(audio_file_path, "rb")}
-            r = requests.post(self.remote_fast_whisper_stt_server, files=files)
-            result = r.json()
-            logging.info(f"{r.status_code}: {result}")
-            return result["text"]
-        elif self.stt_mode == STT_IMPL.SPEACHES:
-            print("logging", audio_file_path)
-            files = {"file": open(audio_file_path, "rb")}
-            data = {"model": self.stt_model, "translation": False, "language": "fr"}
-            response = httpx.post(
-                "{}v1/audio/transcriptions".format(self.speaches_url),
-                files=files,
-                data=data,
-                timeout=100,
-            )
-            logging.info("STT response: {}".format(response))
-            return response.text
+                transcription = ""
+                for segment in segments:
+                    logging.info(
+                        "Whisper > [%.2fs -> %.2fs] %s"
+                        % (segment.start, segment.end, segment.text)
+                    )
+                    transcription = segment.text + " "
+
+                logging.info("Whisper > Transcription complete.")
+                return transcription
+            elif self.stt_mode == STT_IMPL.REMOTE_FASTER_WHISPER:
+                files = {"audio_file": open(audio_file_path, "rb")}
+                r = requests.post(self.remote_fast_whisper_stt_server, files=files)
+                result = r.json()
+                logging.info(f"{r.status_code}: {result}")
+                return result["text"]
+            elif self.stt_mode == STT_IMPL.SPEACHES:
+                print("logging", audio_file_path)
+                files = {"file": open(audio_file_path, "rb")}
+                data = {"model": self.stt_model, "translation": False, "language": "fr"}
+                response = httpx.post(
+                    "{}v1/audio/transcriptions".format(self.speaches_url),
+                    files=files,
+                    data=data,
+                    timeout=100,
+                )
+                logging.info("STT response: {}".format(response))
+                return response.text
+
         return "NOT IMPLEMENTED"
 
     def resume_audio_playback(self):
@@ -297,13 +297,8 @@ class VoiceController:
         logging.info(f"Playing audio file: {audio_file_path}")
         self.playback.load_file(audio_file_path)
         self.playback.play()
-        self.playback.pause()
-        self.playback.seek(0)
-        self.playback.resume()
 
         while self.playback.active:
             time.sleep(0.2)
-
-        time.sleep(1)  # small delay to ensure smooth playback
 
         logging.info("Finished playing audio file: {}".format(audio_file_path))

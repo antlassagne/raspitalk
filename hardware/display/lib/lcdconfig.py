@@ -42,7 +42,7 @@ class RaspberryPi:
         spi_freq=40000000,
         rst=27,
         dc=25,
-        bl=18,
+        bl=None,
         bl_freq=1000,
         i2c=None,
         i2c_freq=100000,
@@ -56,8 +56,17 @@ class RaspberryPi:
 
         self.RST_PIN = self.gpio_mode(rst, self.OUTPUT)
         self.DC_PIN = self.gpio_mode(dc, self.OUTPUT)
-        self.BL_PIN = self.gpio_pwm(bl)
-        self.bl_DutyCycle(0)
+        # Skip backlight pin control by default.  GPIO 18 (the Waveshare
+        # default) is shared with the I2S BCLK used by the ReSpeaker audio
+        # HAT.  Any gpiozero device — PWM *or* DigitalOutput — claims the
+        # pin and overrides the kernel's ALT0 (I2S) function, breaking audio.
+        # Pass an explicit pin number (e.g. bl=18) only when no I2S HAT is
+        # present.
+        if bl is not None:
+            self.BL_PIN = self.gpio_pwm(bl)
+            self.bl_DutyCycle(0)
+        else:
+            self.BL_PIN = None
 
         # Initialize SPI
         self.SPI = spi
@@ -91,10 +100,12 @@ class RaspberryPi:
             self.SPI.writebytes(data)
 
     def bl_DutyCycle(self, duty):
-        self.BL_PIN.value = duty / 100
+        if self.BL_PIN is not None:
+            self.BL_PIN.value = duty / 100
 
     def bl_Frequency(self, freq):  # Hz
-        self.BL_PIN.frequency = freq
+        if self.BL_PIN is not None:
+            self.BL_PIN.frequency = freq
 
     def module_init(self):
         if self.SPI != None:
@@ -110,7 +121,8 @@ class RaspberryPi:
         logging.debug("gpio cleanup...")
         self.digital_write(self.RST_PIN, 1)
         self.digital_write(self.DC_PIN, 0)
-        self.BL_PIN.close()
+        if self.BL_PIN is not None:
+            self.BL_PIN.close()
         time.sleep(0.001)
 
 

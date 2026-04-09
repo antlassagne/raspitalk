@@ -4,7 +4,6 @@ import threading
 
 import requests  # type: ignore
 
-from src.display_controller import DisplayController
 from src.input_controller import INPUT_CONTROLLER_ACTION, InputController
 from src.logging_handler import CallbackHandler
 from src.mic_controller import MicController
@@ -20,14 +19,24 @@ from src.states import (
 from src.types import ErrorCode
 from src.voice_controller import VoiceController
 
+USE_DISPLAY = os.getenv("USE_DISPLAY", "true").lower() == "true"
+if USE_DISPLAY:
+    from src.display_controller import DisplayController
+
 
 def _thread_excepthook(args: threading.ExceptHookArgs):
     logging.exception(
         "Unhandled exception in thread '%s', exiting.",
         args.thread.name if args.thread else "unknown",
-        exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+        exc_info=args.exc_value,
     )
     os._exit(1)
+
+
+def get_startup_sound_file():
+    # Get absolute path to project root (parent of src/)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(project_root, "resources", "startup.mp3")
 
 
 threading.excepthook = _thread_excepthook
@@ -35,12 +44,16 @@ threading.excepthook = _thread_excepthook
 
 class LuniiController:
     def __init__(self, args):
-        self.display = DisplayController()
+        if USE_DISPLAY:
+            self.display = DisplayController()
 
-        # send every log to the display
-        hook_handler = CallbackHandler(callback=self.display.push_log_to_display_queue)
-        logger = logging.getLogger()
-        logger.addHandler(hook_handler)
+            # send every log to the display
+            hook_handler = CallbackHandler(
+                callback=self.display.push_log_to_display_queue
+            )
+            logger = logging.getLogger()
+            logger.addHandler(hook_handler)
+
         self.ai_available = True
 
         host = args.remote_worker_ip
@@ -76,6 +89,10 @@ class LuniiController:
         self.state_machine = InputControllerStateMachine(self.ai_available)
         self.recordings = RecordingsController()
 
+        # startup sound
+        self.voice.push_to_playback_queue(get_startup_sound_file())
+        self.voice.received_final_chunk_to_play = True
+
         # all the commands that are following are handy for debugging so I keep them here commented
         # input_text = self.voice.speech_to_text(self.mic.temp_file)
         # test = "Il était une fois, dans un royaume lointain, une petite sirène nommée Marisol. Chaque soir, elle allumait sa lanterne magique qui scintillait d'un éclat vif, envoyant des bulles de lumière pleines de rêves émerger dans l'océan stellaire. Un petit poisson nommé Finley, curieux et brave, remarqua ces bulles un soir et en tenta de suivre une. Dans sa bulle de lumière, Finley se retrouva transporté dans un monde aux étoiles qui dança au rythme de la musique des sirènes. Il y rencontra Marisol, qui lui expliqua que chaque bulle était un voyage à travers l'histoire et le rêve. Avec un sourire, Marisol invita Finley à sauter ensemble dans la prochaine bulle, promettant une aventure incroyable. Ensemble, ils se retrouvèrent au cœur d'une ancienne légende, où ils devaient aider le grand dragon de l'or est détenu à jouer un concert pour sauver leur royaume des ténèbres. Finley, avec sa petite taille et son grand courage, fit vibrer les cornes du dragon avec une mélodie si charmante que la magie revint dans le royaume. Les ténèbres s'évanouirent et paix et beauté furent restaurées grâce à leur musique partagée. Alors que le premier rayon de soleil éclaire le royaume, Marisol et Finley se promettèrent de toujours partager leurs rêves et aventures. Et chaque soir, dans la lanterne magique, Finley pouvait encore entendre l'harmonie de leur concert sous-marin, rappelant que même les plus petits peuvent accomplir les actes les plus grands. Et c'est ainsi que le petit poisson et la sirène se sont unis dans une amitié éternelle, entre l'eau et la lumière, vivant ensemble la magie de l'histoire qui durait... juste assez pour tester leur imagination. Fin!"
@@ -84,7 +101,8 @@ class LuniiController:
         # self.voice.push_to_tts_queue(test)
         # text = "je voudrais une histoire sur les étoiles avec des chiens et des chats, en 5 phrases."
         # story = self.ollama.generate_text_response(text, WORKING_MODE.STORY_MODE, True)
-        self.display.update(self.state_machine.working_mode)
+        if self.display:
+            self.display.update(self.state_machine.working_mode)
         logging.info("La Boite est prête!")
 
     def stop_logger(self):
@@ -110,7 +128,8 @@ class LuniiController:
         self, state: WORKING_LANGUAGE | WORKING_MODE | DISPLAY_MODE | MENU_STATE
     ):
         # first, in any case, update the display
-        self.display.update(state)
+        if self.display:
+            self.display.update(state)
 
         # then, handle the other controllers
         if isinstance(state, WORKING_MODE):

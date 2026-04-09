@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import threading
 import time
@@ -21,9 +22,13 @@ except Exception as e:
 Class that detects keyboard key presses and run callbacks accordingly.
 """
 
-LEFT_BUTTON_ID = 16
-MIDDLE_BUTTON_ID = 26
-RIGHT_BUTTON_ID = 21
+# I2S pins used by audio HATs such as the ReSpeaker 2-Mic HAT:
+#   GPIO 18 = BCLK, GPIO 19 = LRCLK, GPIO 20 = DIN, GPIO 21 = DOUT
+# Creating a gpiozero device on any of these overrides the kernel's ALT0
+# (I2S) function and breaks audio.  Set a pin to 0 to disable that button.
+LEFT_BUTTON_PIN = int(os.getenv("BUTTON_LEFT_PIN", "16"))
+MIDDLE_BUTTON_PIN = int(os.getenv("BUTTON_MIDDLE_PIN", "13"))
+RIGHT_BUTTON_PIN = int(os.getenv("BUTTON_RIGHT_PIN", "26"))
 
 
 class InputController:
@@ -38,17 +43,18 @@ class InputController:
 
         try:
             time.sleep(1)  # it seems that can improve stability.
-            # launch is badly so for now anyway.
+            # launch is badly slow for now anyway.
 
-            self.left_button = Button(LEFT_BUTTON_ID, bounce_time=0.1, hold_time=2)
-            self.right_button = Button(RIGHT_BUTTON_ID, bounce_time=0.1, hold_time=2)
-            self.middle_button = Button(MIDDLE_BUTTON_ID, bounce_time=0.1, hold_time=2)
-
+            self.left_button = Button(LEFT_BUTTON_PIN, bounce_time=0.1, hold_time=2)
             self.left_button.when_released = self.on_left_button_released
-            self.right_button.when_released = self.on_right_button_released
-            self.middle_button.when_released = self.on_middle_button_released
             self.left_button.when_held = self.on_left_button_held
+
+            self.right_button = Button(RIGHT_BUTTON_PIN, bounce_time=0.1, hold_time=2)
+            self.right_button.when_released = self.on_right_button_released
             self.right_button.when_held = self.on_right_button_held
+
+            self.middle_button = Button(MIDDLE_BUTTON_PIN, bounce_time=0.1, hold_time=2)
+            self.middle_button.when_released = self.on_middle_button_released
             self.middle_button.when_held = self.on_middle_button_held
 
         except Exception:
