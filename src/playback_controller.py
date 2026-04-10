@@ -31,6 +31,9 @@ class PlaybackController:
 
     def __del__(self):
         self.stop()
+        self.running = False
+        if self.playback_thread and self.playback_thread.is_alive():
+            self.playback_thread.join()
 
     def stop(self):
         logging.info("PlaybackController reset called.")
