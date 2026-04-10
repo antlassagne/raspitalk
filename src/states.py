@@ -50,7 +50,7 @@ class InputControllerStateMachine:
     working_mode = WORKING_MODE.CONVERSATION_MODE
     working_language = WORKING_LANGUAGE.FRENCH
     display_mode = DISPLAY_MODE.VISUAL
-    recording_category = RANDOM_CATEGORIES(0)
+    recording_category = RANDOM_CATEGORIES.ALL
     is_ai_available: bool = True
 
     def __init__(self, is_ai_available: bool):

@@ -88,6 +88,11 @@ class BoxController:
         self.state_machine = InputControllerStateMachine(self.ai_available)
         self.recordings = RecordingsController()
 
+        if self.display:
+            self.display.update(self.state_machine.working_mode)
+
+        logging.info("La Boite est prête!")
+
         # startup sound
         self.playback.push_to_playback_queue(get_startup_sound_file())
         self.playback.received_final_chunk_to_play = True
@@ -100,9 +105,6 @@ class BoxController:
         # self.voice.push_to_tts_queue(test)
         # text = "je voudrais une histoire sur les étoiles avec des chiens et des chats, en 5 phrases."
         # story = self.ollama.generate_text_response(text, WORKING_MODE.STORY_MODE, True)
-        if self.display:
-            self.display.update(self.state_machine.working_mode)
-        logging.info("La Boite est prête!")
 
     def stop_logger(self):
         logger = logging.getLogger()
