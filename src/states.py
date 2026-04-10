@@ -1,10 +1,12 @@
 import logging
+import os
 import sys
 import time
 from enum import Enum
 
 from src.input_controller import INPUT_CONTROLLER_ACTION
 
+ENABLE_RANDOM_RECORDING_CATEGORY_PICKING = os.getenv("ENABLE_RANDOM_RECORDING_CATEGORY_PICKING", "false").lower() == "true"
 
 class MENU_STATE(Enum):
     LOADING = 0
@@ -139,9 +141,14 @@ class InputControllerStateMachine:
                     # fallback
                     self.menu_state = MENU_STATE.LISTENING_PROMPT
                 elif self.working_mode == WORKING_MODE.RANDOM_RECORDING_MODE:
-                    logging.info("Entering recording category picking")
-                    self.menu_state = MENU_STATE.PICKING_RECORDING_CATEGORY
-                    return self.recording_category
+                    if ENABLE_RANDOM_RECORDING_CATEGORY_PICKING:
+                        logging.info("Entering recording category picking")
+                        self.menu_state = MENU_STATE.PICKING_RECORDING_CATEGORY
+                        return self.recording_category
+                    else:
+                        logging.info("Skipping recording category picking")
+                        self.menu_state = MENU_STATE.GENERATING_PROMPT
+                        return self.menu_state
 
             elif self.menu_state == MENU_STATE.LANGUAGE_CHOICE:
                 self.menu_state = MENU_STATE.LISTENING_PROMPT
