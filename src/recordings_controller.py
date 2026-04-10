@@ -26,7 +26,7 @@ class RecordingsController:
         logging.info(f"Found {len(self.recordings_list)} recordings.")
 
     def initialize_recordings(self, subfolder) -> list:
-        logging.info("Initializing recordings.")
+        logging.info(f"Initializing recordings for subfolder: {subfolder}")
         # Get absolute path to project root (parent of src/)
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         recordings_path = os.path.join(

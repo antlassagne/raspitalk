@@ -8,6 +8,7 @@ from src.input_controller import INPUT_CONTROLLER_ACTION, InputController
 from src.logging_handler import CallbackHandler
 from src.mic_controller import MicController
 from src.ollama_controller import OllamaController
+from src.playback_controller import PlaybackController, get_startup_sound_file
 from src.recordings_controller import RecordingsController
 from src.states import (
     DISPLAY_MODE,
@@ -33,16 +34,10 @@ def _thread_excepthook(args: threading.ExceptHookArgs):
     os._exit(1)
 
 
-def get_startup_sound_file():
-    # Get absolute path to project root (parent of src/)
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(project_root, "resources", "startup.mp3")
-
-
 threading.excepthook = _thread_excepthook
 
 
-class LuniiController:
+class BoxController:
     def __init__(self, args):
         if USE_DISPLAY:
             self.display = DisplayController()
@@ -76,22 +71,26 @@ class LuniiController:
             logging.info("Server not reachable: {}".format(e))
             self.ai_available = False
 
-        self.ollama = OllamaController(
-            host=host,
-            story_chunk_ready_callback=self.on_story_chunk_available,
-            generation_finished_callback=self.on_story_generation_finished,
-        )
-        self.voice = VoiceController(
-            host=host, on_tts_ready_callback=self.on_story_tts_available
-        )
-        self.mic = MicController()
+        if self.ai_available:
+            logging.info("AI backend is available.")
+            self.ollama = OllamaController(
+                host=host,
+                story_chunk_ready_callback=self.on_story_chunk_available,
+                generation_finished_callback=self.on_story_generation_finished,
+            )
+            self.voice = VoiceController(
+                host=host, on_tts_ready_callback=self.on_story_tts_available
+            )
+            self.mic = MicController()
+
+        self.playback = PlaybackController()
         self.input = InputController(self.handle_input)
         self.state_machine = InputControllerStateMachine(self.ai_available)
         self.recordings = RecordingsController()
 
         # startup sound
-        self.voice.push_to_playback_queue(get_startup_sound_file())
-        self.voice.received_final_chunk_to_play = True
+        self.playback.push_to_playback_queue(get_startup_sound_file())
+        self.playback.received_final_chunk_to_play = True
 
         # all the commands that are following are handy for debugging so I keep them here commented
         # input_text = self.voice.speech_to_text(self.mic.temp_file)
@@ -134,15 +133,17 @@ class LuniiController:
         # then, handle the other controllers
         if isinstance(state, WORKING_MODE):
             # we are in the very begging. Making sure nothing is started.
-            self.mic.stop()
-            self.voice.reset()
+            self.playback.stop()
+            if self.ai_available:
+                self.mic.stop()
+                self.voice.reset()
 
         if isinstance(state, MENU_STATE):
             if state == MENU_STATE.LISTENING_PROMPT:
                 self.mic.start_listening()
 
             if state == MENU_STATE.PAUSED:
-                self.voice.pause_audio_playback()
+                self.playback.pause_audio_playback()
 
             if state == MENU_STATE.LISTENING_PROMPT_FINISHED:
                 self.mic.stop()
@@ -151,8 +152,8 @@ class LuniiController:
                 )
 
             if state == MENU_STATE.GENERATING_PROMPT:
-                if self.voice.is_playback_paused():
-                    self.voice.resume_audio_playback()
+                if self.playback.is_playback_paused():
+                    self.playback.resume_audio_playback()
                     return
 
                 if (
@@ -164,21 +165,23 @@ class LuniiController:
                         self.state_machine.recording_category
                     )
                     if recording_file:
-                        self.voice.push_to_playback_queue(recording_file)
-                        self.voice.received_final_chunk_to_play = True
+                        self.playback.push_to_playback_queue(recording_file)
+                        self.playback.received_final_chunk_to_play = True
                     else:
                         logging.info("No recordings available.")
                 else:
                     self.new_story_from_mic(self.async_mode)
 
             if state == MENU_STATE.MODE_CHOICE:
-                self.mic.stop()
-                self.voice.reset()
-                self.ollama.stop()
+                self.playback.stop()
+                if self.ai_available:
+                    self.mic.stop()
+                    self.voice.reset()
+                    self.ollama.stop()
 
     def on_story_tts_available(self, story_tts_filepath):
         logging.info("Story TTS available: {}".format(story_tts_filepath))
-        self.voice.push_to_playback_queue(story_tts_filepath)
+        self.playback.push_to_playback_queue(story_tts_filepath)
 
     def on_story_generation_finished(self):
         self.voice.signal_received_final_text_chunk()

@@ -85,44 +85,32 @@ class VoiceController:
         self.received_final_chunk_to_play = False
         self.running = True
 
-        if ENABLE_AI:
-            self.tts_queue: Queue = Queue(maxsize=1000)
-            if self.stt_mode == STT_IMPL.FAST_WHISPER:
-                model_size = "large-v3"
-                model_size = "turbo"
-                # Run on GPU with FP16
-                self.model = WhisperModel(
-                    model_size, device="cpu", compute_type="float32"
-                )
-                # or run on GPU with INT8
-                # model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
-                # or run on CPU with INT8
-                # model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        self.tts_queue: Queue = Queue(maxsize=1000)
+        if self.stt_mode == STT_IMPL.FAST_WHISPER:
+            model_size = "large-v3"
+            model_size = "turbo"
+            # Run on GPU with FP16
+            self.model = WhisperModel(model_size, device="cpu", compute_type="float32")
+            # or run on GPU with INT8
+            # model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
+            # or run on CPU with INT8
+            # model = WhisperModel(model_size, device="cpu", compute_type="int8")
 
-            if self.tts_mode == TTS_IMPL.SPEACHES or self.stt_mode == STT_IMPL.SPEACHES:
-                self.speaches_url = "{}:8000/".format(host)
-                logging.info("TTS server on {}".format(self.speaches_url))
-                self.tts_client = httpx.Client(base_url=self.speaches_url)
-                self.tts_model = kokoro_models.piper_tom
-                self.stt_model = "Kelno/whisper-large-v3-french-distil-dec16-ct2"
-            elif (
-                self.tts_mode != TTS_IMPL.SPEACHES
-            ):  ## these were just used during testing
-                self.coqui_tts_server = "{}:5002/api/tts".format(host)
-                self.alltalk_controller = AllTalkController()
+        if self.tts_mode == TTS_IMPL.SPEACHES or self.stt_mode == STT_IMPL.SPEACHES:
+            self.speaches_url = "{}:8000/".format(host)
+            logging.info("TTS server on {}".format(self.speaches_url))
+            self.tts_client = httpx.Client(base_url=self.speaches_url)
+            self.tts_model = kokoro_models.piper_tom
+            self.stt_model = "Kelno/whisper-large-v3-french-distil-dec16-ct2"
+        elif self.tts_mode != TTS_IMPL.SPEACHES:  ## these were just used during testing
+            self.coqui_tts_server = "{}:5002/api/tts".format(host)
+            self.alltalk_controller = AllTalkController()
 
-            self.remote_fast_whisper_stt_server = "{}:9876/api/v0/transcribe".format(
-                host
-            )
+        self.remote_fast_whisper_stt_server = "{}:9876/api/v0/transcribe".format(host)
 
-            self.tts_thread = threading.Thread(target=self.tts_worker, daemon=True)
-            self.tts_thread.start()
+        self.tts_thread = threading.Thread(target=self.tts_worker, daemon=True)
+        self.tts_thread.start()
 
-        self.running = True
-        self.playback_thread = threading.Thread(
-            target=self.playback_worker, daemon=True
-        )
-        self.playback_thread.start()
         logging.info("Hello VoiceController!")
 
     def __del__(self):
@@ -131,17 +119,12 @@ class VoiceController:
     def reset(self):
         logging.info("VoiceController reset called.")
         self.received_final_chunk = False
-        self.received_final_chunk_to_play = False
-        self.stop_audio_playback()
 
     def stop(self):
         logging.info("Stopping VoiceController...")
-        self.stop_audio_playback()
         self.running = False
         if self.tts_thread and self.tts_thread.is_alive():
             self.tts_thread.join()
-        if self.playback_thread and self.playback_thread.is_alive():
-            self.playback_thread.join()
         logging.info(" done.")
 
     def signal_received_final_text_chunk(self):
@@ -151,11 +134,6 @@ class VoiceController:
         logging.info("> TTS queuing text: {}".format(text))
         self.tts_queue.put(text)
         logging.info("> TTS queue size: {}".format(self.tts_queue.qsize()))
-
-    def push_to_playback_queue(self, audio_file_path: str):
-        logging.info("> Playback queuing audio file: {}".format(audio_file_path))
-        self.playback_queue.put(audio_file_path)
-        logging.info("> Playback queue size: {}".format(self.playback_queue.qsize()))
 
     def tts_worker(self):
         id = 0
@@ -176,23 +154,6 @@ class VoiceController:
             else:
                 self.on_tts_ready(output_file)
             self.tts_queue.task_done()
-
-    def playback_worker(self):
-        while self.running:
-            if self.playback_queue.empty():
-                time.sleep(1)
-                continue
-
-            audio_file_path = self.playback_queue.get()
-            logging.info("> Playback worker got audio file: {}".format(audio_file_path))
-            self.play_audio_file(audio_file_path)
-            self.playback_queue.task_done()
-
-            # was this the very final thing to do for this whole stt => generation => tts?
-            if self.playback_queue.empty():
-                if self.received_final_chunk_to_play:
-                    # this was the final thing to do.
-                    self.reset()
 
     def text_to_speech(self, text: str, output_file: str):
         logging.info("> TTS starting TTS request")
@@ -273,32 +234,3 @@ class VoiceController:
                 return response.text
 
         return "NOT IMPLEMENTED"
-
-    def resume_audio_playback(self):
-        logging.info("Resuming audio playback")
-        if self.playback.paused:
-            self.playback.resume()
-
-    def pause_audio_playback(self):
-        logging.info("Pausing audio playback")
-        if not self.playback.paused:
-            self.playback.pause()
-
-    def is_playback_paused(self) -> bool:
-        return self.playback.paused
-
-    def stop_audio_playback(self):
-        logging.info("Stopping audio playback")
-        if self.playback.paused:
-            self.playback.resume()
-        self.playback.stop()
-
-    def play_audio_file(self, audio_file_path: str):
-        logging.info(f"Playing audio file: {audio_file_path}")
-        self.playback.load_file(audio_file_path)
-        self.playback.play()
-
-        while self.playback.active:
-            time.sleep(0.2)
-
-        logging.info("Finished playing audio file: {}".format(audio_file_path))
