@@ -32,14 +32,6 @@ if id "${SERVICE_USER}" &>/dev/null; then
         info "Disabling ${SERVICE_NAME}..."
         sudo -u "${SERVICE_USER}" systemctl --user disable "${SERVICE_NAME}"
     fi
-
-    # --- Step 2: Remove the service file ---
-    SERVICE_PATH="${USER_HOME}/.config/systemd/user/laboite@.service"
-    if [ -f "${SERVICE_PATH}" ]; then
-        info "Removing service file..."
-        rm "${SERVICE_PATH}"
-        sudo -u "${SERVICE_USER}" systemctl --user daemon-reload
-    fi
 else
     warn "User '${SERVICE_USER}' does not exist, skipping service cleanup."
 fi
@@ -50,4 +42,6 @@ if [ -d "${INSTALL_DIR}" ]; then
     rm -rf "${INSTALL_DIR}"
 fi
 
+sudo userdel -f raspitalk
+sudo rm -r /home/raspitalk || true
 info "Raspitalk has been uninstalled."
