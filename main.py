@@ -6,7 +6,7 @@ import signal
 import sys
 import time
 
-from src.lunii_controller import LuniiController
+from src.box_controller import BoxController
 
 os.environ["QT_QPA_PLATFORM"] = "minimal"
 
@@ -43,14 +43,14 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    lunii = LuniiController(args)
+    box = BoxController(args)
 
     def signal_handler(signum, frame):
         print("\nSignal received, closing application...")
-        lunii.stop_logger()
-        lunii.input.stop()
-        lunii.display.stop()
-        # lunii.mic.stop()
+        box.stop_logger()
+        box.input.stop()
+        box.display.stop()
+        # box.mic.stop()
         sys.exit(0)
 
     # Handle Ctrl+C gracefully

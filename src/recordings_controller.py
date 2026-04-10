@@ -26,7 +26,7 @@ class RecordingsController:
         logging.info(f"Found {len(self.recordings_list)} recordings.")
 
     def initialize_recordings(self, subfolder) -> list:
-        logging.info("Initializing recordings.")
+        logging.info(f"Initializing recordings for subfolder: {subfolder}")
         # Get absolute path to project root (parent of src/)
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         recordings_path = os.path.join(
@@ -35,7 +35,7 @@ class RecordingsController:
         return glob.glob(recordings_path, recursive=True)
 
     def get_random_recording_by_category(self, category: RANDOM_CATEGORIES) -> str:
-        logging.info("Fetching a random recording.")
+        logging.info(f"Fetching a random recording from category: {category}.")
         if len(self.recordings_list[category]) == 0:
             logging.warning("No recordings available.")
             raise Exception("No recordings available.")

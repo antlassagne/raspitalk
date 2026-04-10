@@ -30,7 +30,7 @@ class DisplayController:
             WORKING_MODE.CONVERSATION_MODE: "./resources/lowres/conversation_320.jpg",
             WORKING_MODE.STORY_MODE: "./resources/lowres/story_320.jpg",
             WORKING_MODE.RANDOM_RECORDING_MODE: "./resources/lowres/random_320.jpg",
-            WORKING_MODE.PICK_RECORDING_MODE: "./resources/lowres/pick_320.jpg",
+            # WORKING_MODE.PICK_RECORDING_MODE: "./resources/lowres/pick_320.jpg",
             MENU_STATE.LISTENING_PROMPT: "./resources/lowres/listening_320.jpg",
             MENU_STATE.LISTENING_PROMPT_FINISHED: "./resources/lowres/validate_320.jpg",
             MENU_STATE.GENERATING_PROMPT: "./resources/lowres/listenup_320.jpg",

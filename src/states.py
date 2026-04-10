@@ -1,10 +1,12 @@
 import logging
+import os
 import sys
 import time
 from enum import Enum
 
 from src.input_controller import INPUT_CONTROLLER_ACTION
 
+ENABLE_RANDOM_RECORDING_CATEGORY_PICKING = os.getenv("ENABLE_RANDOM_RECORDING_CATEGORY_PICKING", "false").lower() == "true"
 
 class MENU_STATE(Enum):
     LOADING = 0
@@ -21,8 +23,8 @@ class WORKING_MODE(Enum):
     CONVERSATION_MODE = 0
     STORY_MODE = 1
     RANDOM_RECORDING_MODE = 2
-    PICK_RECORDING_MODE = 3
-    LAST = 4
+    # PICK_RECORDING_MODE = 3
+    LAST = 3
 
 
 class WORKING_LANGUAGE(Enum):
@@ -48,14 +50,16 @@ class InputControllerStateMachine:
     working_mode = WORKING_MODE.CONVERSATION_MODE
     working_language = WORKING_LANGUAGE.FRENCH
     display_mode = DISPLAY_MODE.VISUAL
-    recording_category = RANDOM_CATEGORIES(0)
+    recording_category = RANDOM_CATEGORIES.ALL
     is_ai_available: bool = True
 
     def __init__(self, is_ai_available: bool):
         self.is_ai_available = is_ai_available
         if not self.is_ai_available:
             self.working_mode = WORKING_MODE.RANDOM_RECORDING_MODE
-        logging.info("InputControllerStateMachine initialized.")
+        logging.info(
+            f"InputControllerStateMachine initialized in mode {self.working_mode}."
+        )
 
     def next_state(self, input_event: INPUT_CONTROLLER_ACTION):
         """
@@ -116,13 +120,17 @@ class InputControllerStateMachine:
 
         elif input_event == INPUT_CONTROLLER_ACTION.MIDDLE_BUTTON_TOGGLE:
             # this will return the DISPLAY MODE
-            logging.info("Transitioning state on MIDDLE_BUTTON_TOGGLE")
+            logging.info(
+                f"Transitioning state from {self.menu_state} on MIDDLE_BUTTON_TOGGLE"
+            )
             # swich visual mode
             self.display_mode = DISPLAY_MODE(not bool(int(self.display_mode.value)))
             return self.display_mode
 
         elif input_event == INPUT_CONTROLLER_ACTION.RIGHT_BUTTON_TOGGLE:
-            logging.info("Transitioning state on RIGHT_BUTTON_TOGGLE")
+            logging.info(
+                f"Transitioning state from {self.menu_state} and {self.working_mode} on RIGHT_BUTTON_TOGGLE"
+            )
             # this will return the MENU_STATE
             if self.menu_state == MENU_STATE.MODE_CHOICE:
                 if self.working_mode == WORKING_MODE.STORY_MODE:
@@ -133,9 +141,14 @@ class InputControllerStateMachine:
                     # fallback
                     self.menu_state = MENU_STATE.LISTENING_PROMPT
                 elif self.working_mode == WORKING_MODE.RANDOM_RECORDING_MODE:
-                    logging.info("Entering recording category picking")
-                    self.menu_state = MENU_STATE.PICKING_RECORDING_CATEGORY
-                    return self.recording_category
+                    if ENABLE_RANDOM_RECORDING_CATEGORY_PICKING:
+                        logging.info("Entering recording category picking")
+                        self.menu_state = MENU_STATE.PICKING_RECORDING_CATEGORY
+                        return self.recording_category
+                    else:
+                        logging.info("Skipping recording category picking")
+                        self.menu_state = MENU_STATE.GENERATING_PROMPT
+                        return self.menu_state
 
             elif self.menu_state == MENU_STATE.LANGUAGE_CHOICE:
                 self.menu_state = MENU_STATE.LISTENING_PROMPT
@@ -159,7 +172,9 @@ class InputControllerStateMachine:
             return self.menu_state
 
         elif input_event == INPUT_CONTROLLER_ACTION.LEFT_BUTTON_HELD:
-            logging.info("Transitioning state on LEFT_BUTTON_HELD")
+            logging.info(
+                f"Transitioning state from {self.menu_state} on LEFT_BUTTON_HELD"
+            )
             self.menu_state = MENU_STATE.MODE_CHOICE
             return self.menu_state
 
