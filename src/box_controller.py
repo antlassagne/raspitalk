@@ -60,8 +60,8 @@ class BoxController:
 
         # ping the default client and see if I need to fallback (dev only)
         try:
-            r = requests.get("{}:11434".format(host))  # ollama
-            r2 = requests.get("{}:8000/health".format(host))  # speaches
+            r = requests.get("{}:11434".format(host), timeout=2)  # ollama
+            r2 = requests.get("{}:8000/health".format(host), timeout=2)  # speaches
             if r.status_code == 200 and r2.status_code == 200:
                 logging.info("Running the remote backend.")
             else:

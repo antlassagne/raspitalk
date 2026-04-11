@@ -1,6 +1,6 @@
 [Unit]
 Description=Laboite - Interactive Story Box
-After=network.target sound.target
+After=sound.target
 
 [Service]
 Type=simple
