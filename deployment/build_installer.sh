@@ -47,4 +47,4 @@ makeself "${BUILD_DIR}" "${OUTPUT_FILE}" "Raspitalk Installer" ./deployment/inst
 info "Installer built: ${OUTPUT_FILE}"
 info ""
 info "Copy it to the Raspberry Pi and run:"
-info "  sudo ./raspitalk-installer.run"
+info "  ./raspitalk-installer.run"

@@ -8,6 +8,7 @@ dependencies = [
     "ctranslate2>=4.6.0",
     "faster-whisper>=1.2.0",
     "gpiozero>=2.0.1",
+    "rpi-lgpio>=0.6; platform_machine == 'aarch64' or platform_machine == 'armv7l'",
     "just-playback>=0.1.8",
     "numpy>=2.3.4",
     "ollama>=0.6.0",

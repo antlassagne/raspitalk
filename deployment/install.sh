@@ -30,7 +30,9 @@ info "Installing system dependencies..."
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
     libportaudio2 \
-    portaudio19-dev
+    portaudio19-dev \
+    swig \
+    liblgpio-dev
 
 # --- Step 2: Install uv (Python package manager) if not present ---
 if ! command -v uv &>/dev/null; then
@@ -61,7 +63,9 @@ sudo cp "${ROOT_DIR}/.python-version" "${INSTALL_DIR}/"
 info "Setting file ownership to ${SERVICE_USER}..."
 if ! id "${SERVICE_USER}" &>/dev/null; then
     warn "User '${SERVICE_USER}' does not exist yet, creating it..."
-    sudo useradd -m "${SERVICE_USER}"
+    sudo useradd -m -G audio "${SERVICE_USER}"
+    # add the user to the gpio group afterwards
+    sudo usermod -aG gpio "${SERVICE_USER}" || true
 fi
 sudo chown -R "${SERVICE_USER}:" "${INSTALL_DIR}"
 
@@ -74,7 +78,7 @@ info "Installing systemd user service..."
 USER_HOME=$(eval echo "~${SERVICE_USER}")
 sudo mkdir -p "${USER_HOME}/.config/systemd/user"
 sudo cp "${INSTALL_DIR}/deployment/${SERVICE_FILE}" "${USER_HOME}/.config/systemd/user/${GENERIC_SERVICE_FILE}"
-sudo chown -R "${SERVICE_USER}:" "${USER_HOME}/.config"
+sudo chown -R "${SERVICE_USER}": "${USER_HOME}/.config"
 
 # Enable lingering so user services start at boot without a login session
 sudo loginctl enable-linger "${SERVICE_USER}"

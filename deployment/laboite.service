@@ -6,6 +6,7 @@ After=network.target sound.target
 Type=simple
 WorkingDirectory=/usr/local/raspitalk
 Environment="PYTHONUNBUFFERED=1"
+Environment="GPIOZERO_PIN_FACTORY=lgpio"
 ExecStart=/usr/local/raspitalk/.venv/bin/python3 main.py
 Restart=on-failure
 RestartSec=10

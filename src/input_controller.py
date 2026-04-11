@@ -61,13 +61,18 @@ class InputController:
             logging.info(
                 "Failed to initialize button, probably running on a dev machine without them."
             )
-            logging.info("Falling back to keyboard.")
-            self.keyboard_running = True
-            self.listener_thread = threading.Thread(target=self.run, daemon=True)
-            self.listener_thread.start()
+            if DEBUG_KEYBOARD_ENABLED:
+                logging.info("Falling back to keyboard.")
+                self.keyboard_running = True
+                self.listener_thread = threading.Thread(target=self.run, daemon=True)
+                self.listener_thread.start()
 
-            self.listener = Listener(on_press=self.on_press)
-            self.listener.start()
+                self.listener = Listener(on_press=self.on_press)
+                self.listener.start()
+            else:
+                logging.warning(
+                    "No GPIO buttons and no keyboard fallback available. Input disabled."
+                )
 
     ## double click implementation
     # from datetime import datetime, timedelta
