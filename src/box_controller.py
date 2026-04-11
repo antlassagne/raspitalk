@@ -21,6 +21,7 @@ from src.types import ErrorCode
 from src.voice_controller import VoiceController
 
 USE_DISPLAY = os.getenv("USE_DISPLAY", "true").lower() == "true"
+RECORDING_ONLY = os.getenv("RECORDING_ONLY", "false").lower() == "true"
 if USE_DISPLAY:
     from src.display_controller import DisplayController
 
@@ -49,27 +50,33 @@ class BoxController:
             logger = logging.getLogger()
             logger.addHandler(hook_handler)
 
-        self.ai_available = True
-
-        host = args.remote_worker_ip
+        recording_only = RECORDING_ONLY or args.recording_only
         self.async_mode = not args.sync_mode
-        if host and host.startswith("http") is False:
-            host = "http://{}".format(host)
-        logging.info("Remote worker IP: {}".format(host))
-        logging.info("Async mode: {}".format(self.async_mode))
 
-        # ping the default client and see if I need to fallback (dev only)
-        try:
-            r = requests.get("{}:11434".format(host), timeout=2)  # ollama
-            r2 = requests.get("{}:8000/health".format(host), timeout=2)  # speaches
-            if r.status_code == 200 and r2.status_code == 200:
-                logging.info("Running the remote backend.")
-            else:
-                logging.info("Server not reachable.")
-                self.ai_available = False
-        except Exception as e:
-            logging.info("Server not reachable: {}".format(e))
+        if recording_only:
+            logging.info("Recording-only mode: skipping AI backend checks.")
             self.ai_available = False
+        else:
+            self.ai_available = True
+
+            host = args.remote_worker_ip
+            if host and host.startswith("http") is False:
+                host = "http://{}".format(host)
+            logging.info("Remote worker IP: {}".format(host))
+            logging.info("Async mode: {}".format(self.async_mode))
+
+            # ping the default client and see if I need to fallback (dev only)
+            try:
+                r = requests.get("{}:11434".format(host), timeout=2)  # ollama
+                r2 = requests.get("{}:8000/health".format(host), timeout=2)  # speaches
+                if r.status_code == 200 and r2.status_code == 200:
+                    logging.info("Running the remote backend.")
+                else:
+                    logging.info("Server not reachable.")
+                    self.ai_available = False
+            except Exception as e:
+                logging.info("Server not reachable: {}".format(e))
+                self.ai_available = False
 
         if self.ai_available:
             logging.info("AI backend is available.")
