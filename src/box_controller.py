@@ -2,12 +2,8 @@ import logging
 import os
 import threading
 
-import requests  # type: ignore
-
 from src.input_controller import INPUT_CONTROLLER_ACTION, InputController
 from src.logging_handler import CallbackHandler
-from src.mic_controller import MicController
-from src.ollama_controller import OllamaController
 from src.playback_controller import PlaybackController, get_startup_sound_file
 from src.recordings_controller import RecordingsController
 from src.states import (
@@ -18,7 +14,6 @@ from src.states import (
     InputControllerStateMachine,
 )
 from src.types import ErrorCode
-from src.voice_controller import VoiceController
 
 USE_DISPLAY = os.getenv("USE_DISPLAY", "true").lower() == "true"
 RECORDING_ONLY = os.getenv("RECORDING_ONLY", "false").lower() == "true"
@@ -66,6 +61,8 @@ class BoxController:
             logging.info("Async mode: {}".format(self.async_mode))
 
             # ping the default client and see if I need to fallback (dev only)
+            import requests  # type: ignore
+
             try:
                 r = requests.get("{}:11434".format(host), timeout=2)  # ollama
                 r2 = requests.get("{}:8000/health".format(host), timeout=2)  # speaches
@@ -79,6 +76,10 @@ class BoxController:
                 self.ai_available = False
 
         if self.ai_available:
+            from src.mic_controller import MicController
+            from src.ollama_controller import OllamaController
+            from src.voice_controller import VoiceController
+
             logging.info("AI backend is available.")
             self.ollama = OllamaController(
                 host=host,

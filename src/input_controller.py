@@ -42,9 +42,6 @@ class InputController:
 
 
         try:
-            time.sleep(1)  # it seems that can improve stability.
-            # launch is badly slow for now anyway.
-
             self.left_button = Button(LEFT_BUTTON_PIN, bounce_time=0.1, hold_time=2)
             self.left_button.when_released = self.on_left_button_released
             self.left_button.when_held = self.on_left_button_held
