@@ -41,6 +41,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Wait the whole text generation before running the TTS and playback",
     )
+    parser.add_argument(
+        "--recording_only",
+        action="store_true",
+        help="Skip AI backend checks and start directly in recording-only mode (useful for offline/no-internet setups)",
+    )
     args = parser.parse_args()
 
     box = BoxController(args)
