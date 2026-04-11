@@ -63,10 +63,12 @@ sudo cp "${ROOT_DIR}/.python-version" "${INSTALL_DIR}/"
 info "Setting file ownership to ${SERVICE_USER}..."
 if ! id "${SERVICE_USER}" &>/dev/null; then
     warn "User '${SERVICE_USER}' does not exist yet, creating it..."
-    sudo useradd -m -G audio "${SERVICE_USER}"
-    # add the user to the gpio group afterwards
-    sudo usermod -aG gpio "${SERVICE_USER}" || true
+    sudo useradd -m "${SERVICE_USER}"
 fi
+# Ensure the user belongs to all required device groups (idempotent)
+sudo usermod -aG audio "${SERVICE_USER}" || true
+sudo usermod -aG gpio "${SERVICE_USER}" || true
+sudo usermod -aG spi "${SERVICE_USER}" || true
 sudo chown -R "${SERVICE_USER}:" "${INSTALL_DIR}"
 
 # --- Step 5: Set up Python virtual environment (as service user) ---
