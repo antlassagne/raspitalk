@@ -6,8 +6,6 @@ import time
 from enum import Enum
 from typing import Callable
 
-from gpiozero import Button
-
 DEBUG_KEYBOARD_ENABLED = 0
 
 try:
@@ -40,6 +38,8 @@ class InputController:
     def __init__(self, key_pressed_callback: Callable[[int], None]):
         logging.info("Hello InputController!")
         self.key_pressed = key_pressed_callback
+        from gpiozero import Button
+
 
         try:
             time.sleep(1)  # it seems that can improve stability.
